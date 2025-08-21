@@ -1,20 +1,17 @@
 import ballerina/http;
 import ballerina/sql;
 import ballerinax/java.jdbc;
-import ballerina/jwt;
 import ballerina/crypto;
 import ballerina/uuid;
 import ballerina/time;
 import ballerina/log;
 import ballerina/regex;
-import ballerina/jballerina.java;
 
 // Configuration
-configurable string jwtSecret = ?;
-configurable decimal jwtExpiryTime = 3600.0;
+configurable string jwtSecret = "your-super-secret-jwt-key-change-in-production-min-32-chars";
+configurable int jwtExpiryTime = 3600;
 configurable string jwtIssuer = "userportal-auth";
 configurable string jwtAudience = "userportal-users";
-
 configurable string dbPath = "database/userportal.db";
 
 // Database connection - SQLite
@@ -45,56 +42,70 @@ type UserResponse record {|
     boolean is_active;
 |};
 
-type JWTToken record {|
-    string id;
-    string user_id;
-    string token_hash;
-    string expires_at;
-    string created_at;
-    boolean is_revoked;
-|};
+// Simple password hashing (for demo purposes)
+function hashPassword(string password) returns string {
+    return crypto:hashSha256((password + "salt123").toBytes()).toBase16();
+}
 
-// JWT configuration
-jwt:IssuerConfig jwtIssuerConfig = {
-    username: jwtIssuer,
-    issuer: jwtIssuer,
-    audience: [jwtAudience],
-    expTime: jwtExpiryTime,
-    signatureConfig: {
-        config: {
-            keyStore: {
-                path: "resources/keystore.p12",
-                password: "ballerina"
-            },
-            keyAlias: "ballerina",
-            keyPassword: "ballerina"
-        }
+function checkPassword(string password, string hash) returns boolean {
+    string hashedInput = crypto:hashSha256((password + "salt123").toBytes()).toBase16();
+    return hashedInput == hash;
+}
+
+// Simple secure token generation (using direct string concatenation for demo)
+function generateToken(User user) returns string {
+    int currentTime = <int>time:utcNow()[0];
+    int expiryTime = currentTime + jwtExpiryTime;
+    
+    // Create a simple token with user info and expiry
+    string tokenData = string `${user.id}|${user.username}|${user.email}|${expiryTime}`;
+    string signature = crypto:hashSha256((tokenData + jwtSecret).toBytes()).toBase16();
+    
+    return string `${tokenData}|${signature}`;
+}
+
+function validateToken(string token) returns json|error {
+    string[] parts = regex:split(token, "\\|");
+    if parts.length() != 5 {
+        return error("Invalid token format");
     }
-};
-
-// Password hashing using Java BCrypt
-public function hashPassword(string password) returns string|error = @java:Method {
-    'class: "org.mindrot.jbcrypt.BCrypt",
-    name: "hashpw"
-} external;
-
-public function checkPassword(string password, string hash) returns boolean = @java:Method {
-    'class: "org.mindrot.jbcrypt.BCrypt",
-    name: "checkpw"
-} external;
-
-// Generate salt for BCrypt
-public function generateSalt() returns string = @java:Method {
-    'class: "org.mindrot.jbcrypt.BCrypt",
-    name: "gensalt"
-} external;
+    
+    string userId = parts[0];
+    string username = parts[1];
+    string email = parts[2];
+    string expStr = parts[3];
+    string providedSignature = parts[4];
+    
+    // Reconstruct token data for signature verification
+    string tokenData = string `${userId}|${username}|${email}|${expStr}`;
+    string expectedSignature = crypto:hashSha256((tokenData + jwtSecret).toBytes()).toBase16();
+    
+    if expectedSignature != providedSignature {
+        return error("Invalid token signature");
+    }
+    
+    // Check expiry
+    int exp = check int:fromString(expStr);
+    int currentTime = <int>time:utcNow()[0];
+    if exp < currentTime {
+        return error("Token expired");
+    }
+    
+    // Return as JSON
+    json payload = {
+        "userId": userId,
+        "username": username,
+        "email": email,
+        "exp": exp,
+        "iss": jwtIssuer,
+        "aud": jwtAudience
+    };
+    
+    return payload;
+}
 
 // Utility functions
 function generateUserId() returns string {
-    return uuid:createType1AsString();
-}
-
-function generateTokenId() returns string {
     return uuid:createType1AsString();
 }
 
@@ -107,16 +118,47 @@ function isValidPassword(string password) returns boolean {
     return password.length() >= 8;
 }
 
+// Initialize database with schema
+function initializeDatabase(jdbc:Client dbClient) returns error? {
+    log:printInfo("Initializing database schema...");
+    
+    // Create users table
+    _ = check dbClient->execute(`
+        CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY,
+            username TEXT UNIQUE NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            is_active BOOLEAN DEFAULT 1
+        )
+    `);
+    
+    // Create jwt_tokens table
+    _ = check dbClient->execute(`
+        CREATE TABLE IF NOT EXISTS jwt_tokens (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            token_hash TEXT NOT NULL,
+            expires_at DATETIME NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            is_revoked BOOLEAN DEFAULT 0,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    `);
+    
+    log:printInfo("Database schema initialized successfully!");
+}
+
 // Database operations
 function createUser(string username, string email, string password) returns User|error {
-    // Hash password with salt
-    string salt = generateSalt();
-    string hashedPassword = check hashPassword(password, salt);
+    string hashedPassword = hashPassword(password);
     string userId = generateUserId();
     
     sql:ExecutionResult result = check dbClient->execute(`
         INSERT INTO users (id, username, email, password_hash, is_active)
-        VALUES (${userId}, ${username}, ${email}, ${hashedPassword}, true)
+        VALUES (${userId}, ${username}, ${email}, ${hashedPassword}, 1)
     `);
     
     if result.affectedRowCount == 1 {
@@ -129,7 +171,7 @@ function createUser(string username, string email, string password) returns User
 function getUserByUsername(string username) returns User|error? {
     User|sql:Error result = dbClient->queryRow(`
         SELECT id, username, email, password_hash, created_at, updated_at, is_active
-        FROM users WHERE username = ${username} AND is_active = true
+        FROM users WHERE username = ${username} AND is_active = 1
     `);
     
     if result is sql:NoRowsError {
@@ -142,7 +184,7 @@ function getUserByUsername(string username) returns User|error? {
 function getUserByEmail(string email) returns User|error? {
     User|sql:Error result = dbClient->queryRow(`
         SELECT id, username, email, password_hash, created_at, updated_at, is_active
-        FROM users WHERE email = ${email} AND is_active = true
+        FROM users WHERE email = ${email} AND is_active = 1
     `);
     
     if result is sql:NoRowsError {
@@ -155,28 +197,19 @@ function getUserByEmail(string email) returns User|error? {
 function getUserById(string userId) returns User|error {
     return dbClient->queryRow(`
         SELECT id, username, email, password_hash, created_at, updated_at, is_active
-        FROM users WHERE id = ${userId} AND is_active = true
+        FROM users WHERE id = ${userId} AND is_active = 1
     `);
 }
 
-function updateUserEmail(string userId, string email) returns boolean|error {
-    sql:ExecutionResult result = check dbClient->execute(`
-        UPDATE users SET email = ${email}, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ${userId} AND is_active = true
-    `);
-    
-    return result.affectedRowCount == 1;
-}
-
-function storeJWTToken(string userId, string tokenHash, decimal expiryTime) returns string|error {
-    string tokenId = generateTokenId();
+function storeJWTToken(string userId, string tokenHash) returns string|error {
+    string tokenId = uuid:createType1AsString();
     time:Utc currentTime = time:utcNow();
-    time:Utc expiryUtc = time:utcAddSeconds(currentTime, expiryTime);
+    time:Utc expiryUtc = time:utcAddSeconds(currentTime, <decimal>jwtExpiryTime);
     string expiryString = time:utcToString(expiryUtc);
     
     sql:ExecutionResult result = check dbClient->execute(`
         INSERT INTO jwt_tokens (id, user_id, token_hash, expires_at, is_revoked)
-        VALUES (${tokenId}, ${userId}, ${tokenHash}, ${expiryString}, false)
+        VALUES (${tokenId}, ${userId}, ${tokenHash}, ${expiryString}, 0)
     `);
     
     if result.affectedRowCount == 1 {
@@ -187,11 +220,10 @@ function storeJWTToken(string userId, string tokenHash, decimal expiryTime) retu
 }
 
 function isTokenValid(string tokenHash) returns boolean|error {
-    JWTToken|sql:Error result = dbClient->queryRow(`
-        SELECT id, user_id, token_hash, expires_at, created_at, is_revoked
-        FROM jwt_tokens 
+    record {|string id;|}|sql:Error result = dbClient->queryRow(`
+        SELECT id FROM jwt_tokens 
         WHERE token_hash = ${tokenHash} 
-        AND is_revoked = false 
+        AND is_revoked = 0 
         AND expires_at > CURRENT_TIMESTAMP
     `);
     
@@ -200,18 +232,11 @@ function isTokenValid(string tokenHash) returns boolean|error {
 
 function revokeToken(string tokenHash) returns boolean|error {
     sql:ExecutionResult result = check dbClient->execute(`
-        UPDATE jwt_tokens SET is_revoked = true
+        UPDATE jwt_tokens SET is_revoked = 1
         WHERE token_hash = ${tokenHash}
     `);
     
     return result.affectedRowCount > 0;
-}
-
-function cleanupExpiredTokens() returns error? {
-    _ = check dbClient->execute(`
-        DELETE FROM jwt_tokens 
-        WHERE expires_at < CURRENT_TIMESTAMP OR is_revoked = true
-    `);
 }
 
 // Convert User to UserResponse (remove sensitive data)
@@ -348,36 +373,21 @@ service /api on new http:Listener(8080) {
         }
 
         // Verify password
-        boolean|error passwordValid = checkPassword(password, user.password_hash);
-        if passwordValid is error || !passwordValid {
+        boolean passwordValid = checkPassword(password, user.password_hash);
+        if !passwordValid {
             res.statusCode = 401;
             res.setJsonPayload({"error": "Invalid credentials"});
             return res;
         }
 
-        // Generate JWT token
-        jwt:IssuerConfig config = {
-            ...jwtIssuerConfig,
-            customClaims: {
-                "userId": user.id,
-                "username": user.username,
-                "email": user.email
-            }
-        };
-
-        string|jwt:Error jwtToken = jwt:issue(config);
-        if jwtToken is jwt:Error {
-            log:printError("Failed to generate JWT token", jwtToken);
-            res.statusCode = 500;
-            res.setJsonPayload({"error": "Failed to generate token"});
-            return res;
-        }
+        // Generate token
+        string token = generateToken(user);
 
         // Hash token for storage
-        string tokenHash = crypto:hashSha256(jwtToken.toBytes()).toBase16();
+        string tokenHash = crypto:hashSha256(token.toBytes()).toBase16();
         
         // Store token in database
-        string|error tokenId = storeJWTToken(user.id, tokenHash, jwtExpiryTime);
+        string|error tokenId = storeJWTToken(user.id, tokenHash);
         if tokenId is error {
             log:printError("Failed to store JWT token", tokenId);
             res.statusCode = 500;
@@ -387,7 +397,7 @@ service /api on new http:Listener(8080) {
 
         log:printInfo("User logged in successfully: " + username);
         res.setJsonPayload({
-            "token": jwtToken,
+            "token": token,
             "message": "Login successful",
             "user": toUserResponse(user),
             "expiresIn": jwtExpiryTime
@@ -414,14 +424,9 @@ service /api on new http:Listener(8080) {
 
         string token = authHeader.substring(7);
         
-        // Validate JWT token
-        jwt:Payload|jwt:Error payload = jwt:validate(token, {
-            issuer: jwtIssuer,
-            audience: jwtAudience,
-            signatureConfig: jwtIssuerConfig.signatureConfig
-        });
-
-        if payload is jwt:Error {
+        // Validate token
+        json|error payload = validateToken(token);
+        if payload is error {
             res.statusCode = 401;
             res.setJsonPayload({"error": "Invalid or expired token"});
             return res;
@@ -436,15 +441,15 @@ service /api on new http:Listener(8080) {
             return res;
         }
 
-        // Get user from token claims
-        json|error userIdClaim = payload["userId"];
-        if userIdClaim is error {
+        // Get user from token
+        json|error userIdField = payload.userId;
+        if userIdField is error {
             res.statusCode = 401;
             res.setJsonPayload({"error": "Invalid token claims"});
             return res;
         }
 
-        string userId = userIdClaim.toString();
+        string userId = userIdField.toString();
         User|error user = getUserById(userId);
         if user is error {
             res.statusCode = 401;
@@ -455,99 +460,6 @@ service /api on new http:Listener(8080) {
         res.setJsonPayload({
             "user": toUserResponse(user),
             "message": "Profile retrieved successfully"
-        });
-        return res;
-    }
-
-    resource function put auth/profile(http:Request req, @http:Payload json data) returns http:Response {
-        http:Response res = new;
-        
-        // Get and validate authorization header
-        string|http:HeaderNotFoundError authHeader = req.getHeader("Authorization");
-        if authHeader is http:HeaderNotFoundError {
-            res.statusCode = 401;
-            res.setJsonPayload({"error": "No authorization header"});
-            return res;
-        }
-
-        if !authHeader.startsWith("Bearer ") {
-            res.statusCode = 401;
-            res.setJsonPayload({"error": "Invalid authorization format"});
-            return res;
-        }
-
-        string token = authHeader.substring(7);
-        
-        // Validate JWT token
-        jwt:Payload|jwt:Error payload = jwt:validate(token, {
-            issuer: jwtIssuer,
-            audience: jwtAudience,
-            signatureConfig: jwtIssuerConfig.signatureConfig
-        });
-
-        if payload is jwt:Error {
-            res.statusCode = 401;
-            res.setJsonPayload({"error": "Invalid or expired token"});
-            return res;
-        }
-
-        // Check if token exists in database and is not revoked
-        string tokenHash = crypto:hashSha256(token.toBytes()).toBase16();
-        boolean|error tokenValid = isTokenValid(tokenHash);
-        if tokenValid is error || !tokenValid {
-            res.statusCode = 401;
-            res.setJsonPayload({"error": "Token has been revoked or expired"});
-            return res;
-        }
-
-        // Get user from token claims
-        json|error userIdClaim = payload["userId"];
-        if userIdClaim is error {
-            res.statusCode = 401;
-            res.setJsonPayload({"error": "Invalid token claims"});
-            return res;
-        }
-
-        string userId = userIdClaim.toString();
-        User|error user = getUserById(userId);
-        if user is error {
-            res.statusCode = 401;
-            res.setJsonPayload({"error": "User not found"});
-            return res;
-        }
-
-        // Update email if provided
-        json|error emailField = data.email;
-        if emailField is string {
-            string newEmail = emailField.toString();
-            if !isValidEmail(newEmail) {
-                res.statusCode = 400;
-                res.setJsonPayload({"error": "Invalid email format"});
-                return res;
-            }
-
-            // Check if email already exists
-            User|error? existingUser = getUserByEmail(newEmail);
-            if existingUser is User && existingUser.id != userId {
-                res.statusCode = 409;
-                res.setJsonPayload({"error": "Email already exists"});
-                return res;
-            }
-
-            boolean|error updateResult = updateUserEmail(userId, newEmail);
-            if updateResult is error || !updateResult {
-                res.statusCode = 500;
-                res.setJsonPayload({"error": "Failed to update profile"});
-                return res;
-            }
-
-            // Get updated user
-            user = check getUserById(userId);
-        }
-
-        res.setJsonPayload({
-            "message": "Profile updated successfully",
-            "user": toUserResponse(user)
         });
         return res;
     }
@@ -575,15 +487,5 @@ service /api on new http:Listener(8080) {
 
         res.setJsonPayload({"message": "Logout successful"});
         return res;
-    }
-
-    // Cleanup endpoint for expired tokens (can be called by a cron job)
-    resource function post auth/cleanup() returns json {
-        error? cleanupResult = cleanupExpiredTokens();
-        if cleanupResult is error {
-            log:printError("Failed to cleanup expired tokens", cleanupResult);
-            return {"error": "Failed to cleanup expired tokens"};
-        }
-        return {"message": "Expired tokens cleaned up successfully"};
     }
 }
