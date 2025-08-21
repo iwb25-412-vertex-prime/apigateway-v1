@@ -1,0 +1,20 @@
+[userportal.auth_service]
+# JWT Configuration
+jwtSecret = "your-super-secret-jwt-key-change-in-production-min-32-chars"
+jwtExpiryTime = 3600  # 1 hour in seconds
+jwtIssuer = "userportal-auth"
+jwtAudience = "userportal-users"
+
+# Server Configuration
+port = 8080
+
+# Database Configuration
+[userportal.auth_service.database]
+host = "localhost"
+port = 3306
+name = "userportal"
+username = "root"
+password = "password"
+connectionPool.maxOpenConnections = 10
+connectionPool.maxConnectionLifeTime = 30000
+connectionPool.minIdleConnections = 1

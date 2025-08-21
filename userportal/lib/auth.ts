@@ -7,6 +7,9 @@ export interface User {
   id: string;
   username: string;
   email: string;
+  created_at: string;
+  updated_at: string;
+  is_active: boolean;
 }
 
 export interface LoginRequest {
@@ -24,11 +27,13 @@ export interface LoginResponse {
   token: string;
   message: string;
   user: User;
+  expiresIn: number;
 }
 
 export class AuthService {
   private static TOKEN_KEY = "auth_token";
   private static USER_KEY = "auth_user";
+  private static TOKEN_EXPIRY_KEY = "auth_token_expiry";
 
   // Register a new user
   static async register(data: RegisterRequest): Promise<boolean> {
@@ -74,15 +79,19 @@ export class AuthService {
       });
 
       if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Login failed:", errorData.error);
         return null;
       }
 
       const result: LoginResponse = await response.json();
 
-      // Store token and user data
+      // Store token, user data, and expiry time
       if (typeof window !== "undefined") {
+        const expiryTime = Date.now() + (result.expiresIn * 1000);
         localStorage.setItem(this.TOKEN_KEY, result.token);
         localStorage.setItem(this.USER_KEY, JSON.stringify(result.user));
+        localStorage.setItem(this.TOKEN_EXPIRY_KEY, expiryTime.toString());
       }
 
       return result;
@@ -107,11 +116,8 @@ export class AuthService {
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
-      // Clear local storage
-      if (typeof window !== "undefined") {
-        localStorage.removeItem(this.TOKEN_KEY);
-        localStorage.removeItem(this.USER_KEY);
-      }
+      // Clear all stored auth data
+      this.clearStorage();
     }
   }
 
@@ -130,14 +136,40 @@ export class AuthService {
 
   // Check if user is authenticated
   static isAuthenticated(): boolean {
-    return this.getToken() !== null;
+    const token = this.getToken();
+    if (!token) return false;
+
+    // Check if token is expired
+    const expiryTime = this.getTokenExpiry();
+    if (expiryTime && Date.now() > expiryTime) {
+      this.clearStorage();
+      return false;
+    }
+
+    return true;
+  }
+
+  // Get token expiry time
+  private static getTokenExpiry(): number | null {
+    if (typeof window === "undefined") return null;
+    const expiry = localStorage.getItem(this.TOKEN_EXPIRY_KEY);
+    return expiry ? parseInt(expiry) : null;
+  }
+
+  // Clear all stored auth data
+  private static clearStorage(): void {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(this.TOKEN_KEY);
+      localStorage.removeItem(this.USER_KEY);
+      localStorage.removeItem(this.TOKEN_EXPIRY_KEY);
+    }
   }
 
   // Get user profile from backend
   static async getProfile(): Promise<User | null> {
     try {
       const token = this.getToken();
-      if (!token) return null;
+      if (!token || !this.isAuthenticated()) return null;
 
       const response = await fetch(`${API_BASE_URL}/auth/profile`, {
         headers: {
@@ -146,14 +178,16 @@ export class AuthService {
       });
 
       if (!response.ok) {
-        // Token might be expired, clear local storage
-        this.logout();
+        // Token might be expired or invalid, clear storage
+        this.clearStorage();
         return null;
       }
 
-      return await response.json();
+      const result = await response.json();
+      return result.user;
     } catch (error) {
       console.error("Profile fetch error:", error);
+      this.clearStorage();
       return null;
     }
   }

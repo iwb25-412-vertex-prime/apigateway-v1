@@ -1,6 +1,6 @@
-# User Portal with Ballerina JWT Authentication
+# User Portal with Secure JWT Authentication
 
-A full-stack application with JWT authentication using Ballerina backend and Next.js frontend.
+A full-stack application with secure JWT authentication using Ballerina backend, MySQL database, and Next.js frontend.
 
 ## Project Structure
 
@@ -25,29 +25,66 @@ A full-stack application with JWT authentication using Ballerina backend and Nex
 ## Features
 
 ### Backend (Ballerina)
-- JWT token generation and validation
-- User registration and login
-- Protected endpoints
-- CORS support for frontend
-- User profile management
-- RSA key-based JWT signing
+- **Secure JWT Authentication**: Real JWT tokens with RSA signing
+- **Password Security**: BCrypt password hashing
+- **Database Storage**: MySQL database for persistent user data
+- **Token Management**: JWT tokens stored and tracked in database
+- **Token Revocation**: Logout revokes tokens in database
+- **Input Validation**: Email format and password strength validation
+- **Protected Endpoints**: JWT validation for secure routes
+- **CORS Support**: Configured for frontend integration
+- **Token Cleanup**: Automatic cleanup of expired tokens
 
 ### Frontend (Next.js)
-- React components for authentication
-- Custom hooks for auth state management
-- TypeScript support
-- Tailwind CSS styling
-- Local storage for token persistence
+- **React Authentication**: Components for login/register/profile
+- **Auth Context**: Global authentication state management
+- **Token Expiry Handling**: Automatic token expiration detection
+- **TypeScript Support**: Full type safety
+- **Tailwind CSS**: Modern styling
+- **Secure Storage**: Token expiry tracking and cleanup
 
 ## Prerequisites
 
 - **Ballerina**: Swan Lake (2201.10.0 or later)
 - **Node.js**: 18.x or later
 - **Java**: 11 or later (for Ballerina)
+- **MySQL**: 8.0 or later
+- **MySQL Connector**: Included in dependencies
 
 ## Quick Start
 
-### Option 1: Use Startup Scripts
+### Step 1: Database Setup
+
+**Windows:**
+```bash
+setup-database.bat
+```
+
+**Unix/Linux/macOS:**
+```bash
+./setup-database.sh
+```
+
+Or manually:
+```sql
+mysql -u root -p < ballerina-backend/database/schema.sql
+```
+
+### Step 2: Configure Database
+
+Update `ballerina-backend/Config.toml` with your MySQL credentials:
+```toml
+[userportal.auth_service.database]
+host = "localhost"
+port = 3306
+name = "userportal"
+username = "your_mysql_username"
+password = "your_mysql_password"
+```
+
+### Step 3: Start Services
+
+**Option 1: Use Startup Scripts**
 
 **Windows:**
 ```bash
@@ -59,7 +96,7 @@ start-services.bat
 ./start-services.sh
 ```
 
-### Option 2: Manual Setup
+**Option 2: Manual Setup**
 
 1. **Start the Ballerina backend:**
    ```bash
@@ -146,6 +183,24 @@ jwtExpiryTime = 3600
 port = 8080
 ```
 
+### Database Schema
+The application uses the following database structure:
+
+**Users Table:**
+- `id`: Unique user identifier (UUID)
+- `username`: Unique username (3-50 characters)
+- `email`: Unique email address (validated format)
+- `password_hash`: BCrypt hashed password
+- `created_at`, `updated_at`: Timestamps
+- `is_active`: Account status
+
+**JWT Tokens Table:**
+- `id`: Unique token identifier
+- `user_id`: Reference to users table
+- `token_hash`: SHA256 hash of JWT token
+- `expires_at`: Token expiration timestamp
+- `is_revoked`: Token revocation status
+
 ### Frontend Configuration (.env.local)
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:8080/api
@@ -153,11 +208,24 @@ NEXT_PUBLIC_API_URL=http://localhost:8080/api
 
 ## Security Features
 
-- RSA-based JWT signing
-- Token expiration handling
-- CORS protection
-- Secure password handling (extend with hashing in production)
-- Protected route middleware
+### ✅ Implemented Security Measures
+- **Real JWT Tokens**: RSA-based JWT signing with proper validation
+- **Password Hashing**: BCrypt hashing for secure password storage
+- **Database Storage**: User data and tokens stored in MySQL database
+- **Token Revocation**: Logout revokes tokens in database
+- **Token Expiration**: Automatic token expiry handling (1 hour default)
+- **Input Validation**: Email format and password strength validation
+- **CORS Protection**: Configured for specific origins
+- **Protected Routes**: JWT validation middleware
+- **Token Cleanup**: Automatic cleanup of expired/revoked tokens
+
+### 🔒 Security Best Practices
+- Passwords never stored in plain text
+- JWT tokens are cryptographically signed
+- Tokens tracked in database for revocation
+- Automatic token expiry prevents long-term exposure
+- Input sanitization and validation
+- Secure error handling without information leakage
 
 ## Development
 
@@ -178,26 +246,45 @@ Use the provided curl examples or tools like Postman to test the API endpoints.
 
 ## Production Considerations
 
-1. **Security:**
-   - Change JWT secret key
-   - Implement password hashing (bcrypt)
-   - Use HTTPS
-   - Implement rate limiting
-   - Add input validation
+### ✅ Already Implemented
+- ✅ Real JWT tokens with RSA signing
+- ✅ BCrypt password hashing
+- ✅ MySQL database with proper schema
+- ✅ Input validation and sanitization
+- ✅ Token revocation and cleanup
+- ✅ Secure error handling
 
-2. **Database:**
-   - Replace in-memory storage with a proper database
-   - Add user data persistence
+### 🚀 Additional Production Requirements
 
-3. **Monitoring:**
-   - Add logging and monitoring
-   - Implement health checks
-   - Add error tracking
+1. **Security Enhancements:**
+   - Use HTTPS/TLS certificates
+   - Implement rate limiting for login attempts
+   - Add CSRF protection
+   - Set up Web Application Firewall (WAF)
+   - Enable database SSL connections
 
-4. **Deployment:**
-   - Use environment variables for configuration
+2. **Configuration:**
+   - Use environment variables for sensitive config
+   - Change default JWT secret key
+   - Set up proper database user with limited privileges
+   - Configure secure session management
+
+3. **Monitoring & Logging:**
+   - Add structured logging
+   - Implement health checks and metrics
+   - Set up error tracking (e.g., Sentry)
+   - Monitor database performance
+
+4. **Infrastructure:**
    - Set up proper CI/CD pipeline
    - Configure load balancing
+   - Implement database backups
+   - Set up monitoring and alerting
+
+5. **Performance:**
+   - Add database connection pooling (already configured)
+   - Implement caching for frequently accessed data
+   - Optimize database queries with indexes (already added)
 
 ## Troubleshooting
 
