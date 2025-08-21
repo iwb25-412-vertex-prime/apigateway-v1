@@ -1,4 +1,0 @@
-[userportal.auth_service]
-jwtSecret = "your-super-secret-jwt-key-change-this-in-production-environment"
-jwtExpiryTime = 3600
-port = 8080
