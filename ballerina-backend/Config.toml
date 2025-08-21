@@ -8,13 +8,5 @@ jwtAudience = "userportal-users"
 # Server Configuration
 port = 8080
 
-# Database Configuration
-[userportal.auth_service.database]
-host = "localhost"
-port = 3306
-name = "userportal"
-username = "root"
-password = "password"
-connectionPool.maxOpenConnections = 10
-connectionPool.maxConnectionLifeTime = 30000
-connectionPool.minIdleConnections = 1
+# Database Configuration (SQLite)
+dbPath = "database/userportal.db"

@@ -1,32 +1,28 @@
 import ballerina/http;
 import ballerina/sql;
-import ballerina/mysql;
+import ballerinax/java.jdbc;
 import ballerina/jwt;
 import ballerina/crypto;
 import ballerina/uuid;
 import ballerina/time;
 import ballerina/log;
 import ballerina/regex;
+import ballerina/jballerina.java;
 
 // Configuration
 configurable string jwtSecret = ?;
-configurable int jwtExpiryTime = 3600;
+configurable decimal jwtExpiryTime = 3600.0;
 configurable string jwtIssuer = "userportal-auth";
 configurable string jwtAudience = "userportal-users";
 
-configurable string dbHost = "localhost";
-configurable int dbPort = 3306;
-configurable string dbName = "userportal";
-configurable string dbUsername = "root";
-configurable string dbPassword = "password";
+configurable string dbPath = "database/userportal.db";
 
-// Database connection
-mysql:Client dbClient = check new (
-    host = dbHost,
-    port = dbPort,
-    database = dbName,
-    user = dbUsername,
-    password = dbPassword
+// Database connection - SQLite
+jdbc:Client dbClient = check new (
+    url = "jdbc:sqlite:" + dbPath,
+    options = {
+        properties: {"foreign_keys": "ON"}
+    }
 );
 
 // User model
@@ -78,12 +74,19 @@ jwt:IssuerConfig jwtIssuerConfig = {
 
 // Password hashing using Java BCrypt
 public function hashPassword(string password) returns string|error = @java:Method {
-    'class: "org.mindrot.jbcrypt.BCrypt"
+    'class: "org.mindrot.jbcrypt.BCrypt",
+    name: "hashpw"
 } external;
 
 public function checkPassword(string password, string hash) returns boolean = @java:Method {
     'class: "org.mindrot.jbcrypt.BCrypt",
     name: "checkpw"
+} external;
+
+// Generate salt for BCrypt
+public function generateSalt() returns string = @java:Method {
+    'class: "org.mindrot.jbcrypt.BCrypt",
+    name: "gensalt"
 } external;
 
 // Utility functions
@@ -106,8 +109,9 @@ function isValidPassword(string password) returns boolean {
 
 // Database operations
 function createUser(string username, string email, string password) returns User|error {
-    // Hash password
-    string hashedPassword = check hashPassword(password);
+    // Hash password with salt
+    string salt = generateSalt();
+    string hashedPassword = check hashPassword(password, salt);
     string userId = generateUserId();
     
     sql:ExecutionResult result = check dbClient->execute(`
@@ -164,7 +168,7 @@ function updateUserEmail(string userId, string email) returns boolean|error {
     return result.affectedRowCount == 1;
 }
 
-function storeJWTToken(string userId, string tokenHash, int expiryTime) returns string|error {
+function storeJWTToken(string userId, string tokenHash, decimal expiryTime) returns string|error {
     string tokenId = generateTokenId();
     time:Utc currentTime = time:utcNow();
     time:Utc expiryUtc = time:utcAddSeconds(currentTime, expiryTime);
@@ -231,6 +235,15 @@ function toUserResponse(User user) returns UserResponse {
     }
 }
 service /api on new http:Listener(8080) {
+    
+    // Initialize database on service start
+    function init() returns error? {
+        error? initResult = initializeDatabase(dbClient);
+        if initResult is error {
+            log:printError("Failed to initialize database", initResult);
+            return initResult;
+        }
+    }
 
     resource function get health() returns json {
         return {
