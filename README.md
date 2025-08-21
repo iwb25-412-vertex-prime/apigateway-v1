@@ -1,6 +1,6 @@
-# User Portal with Secure JWT Authentication
+# User Portal with Secure Authentication
 
-A full-stack application with secure JWT authentication using Ballerina backend, MySQL database, and Next.js frontend.
+A full-stack application with secure authentication using Ballerina backend, SQLite database, and Next.js frontend. Features password hashing, JWT-like tokens, database storage, and token revocation.
 
 ## Project Structure
 
@@ -22,20 +22,157 @@ A full-stack application with secure JWT authentication using Ballerina backend,
 └── README.md                  # This file
 ```
 
+## How Authentication Works
+
+### 🔐 Authentication Flow
+
+The application implements a secure JWT-like authentication system with database token tracking:
+
+1. **User Registration**:
+
+   - User provides username, email, and password via `/api/auth/register`
+   - Password is hashed using SHA256 with salt for security
+   - User data stored in SQLite `users` table with UUID as primary key
+   - Returns success message with user info (password excluded for security)
+
+2. **User Login**:
+
+   - User provides credentials via `/api/auth/login`
+   - System verifies password against stored hash using salt comparison
+   - Generates secure token containing user data and expiry timestamp
+   - Token hash stored in `jwt_tokens` table for tracking and revocation
+   - Returns token and user info to client for session management
+
+3. **Protected Requests**:
+
+   - Client includes token in `Authorization: Bearer <token>` header
+   - Server validates token signature using secret key
+   - Checks token expiry and database revocation status
+   - Extracts user info from token payload for request processing
+   - Rejects requests with invalid, expired, or revoked tokens
+
+4. **Token Validation Process**:
+
+   - Parse token into data and signature components
+   - Verify signature matches expected hash of data + secret
+   - Check expiry timestamp against current time
+   - Query database to ensure token hasn't been revoked
+   - Extract user information for authorized operations
+
+5. **Logout & Token Revocation**:
+   - Client sends logout request with current token
+   - Server marks token as revoked in `jwt_tokens` table
+   - Token becomes immediately invalid for all future requests
+   - User must login again to obtain new valid token
+
+### 🛡️ Security Features
+
+- **Password Hashing**: SHA256 with salt (passwords never stored in plain text)
+- **Token Signing**: Cryptographic signatures prevent token tampering
+- **Token Expiry**: Tokens expire after 1 hour (configurable)
+- **Token Revocation**: Logout immediately invalidates tokens
+- **Database Tracking**: All tokens tracked for security auditing
+- **Input Validation**: Email format and password strength validation
+- **CORS Protection**: Configured for specific origins only
+
+### 🗄️ Database Schema
+
+The application uses SQLite database with two main tables for user management and token tracking:
+
+#### Users Table
+
+Stores user account information with secure password hashing:
+
+```sql
+CREATE TABLE users (
+    id TEXT PRIMARY KEY,              -- UUID for user identification
+    username TEXT UNIQUE NOT NULL,    -- 3-50 characters, unique constraint
+    email TEXT UNIQUE NOT NULL,       -- Validated email format, unique constraint
+    password_hash TEXT NOT NULL,      -- SHA256 hashed password with salt
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,  -- Account creation time
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,  -- Last profile update
+    is_active BOOLEAN DEFAULT 1       -- Account status (1=active, 0=disabled)
+);
+```
+
+**Key Features:**
+
+- UUID primary keys for security and scalability
+- Unique constraints on username and email prevent duplicates
+- Password never stored in plain text (SHA256 + salt)
+- Timestamps for audit trail and account management
+- Active status for account suspension without deletion
+
+#### JWT Tokens Table
+
+Tracks all issued tokens for security and revocation:
+
+```sql
+CREATE TABLE jwt_tokens (
+    id TEXT PRIMARY KEY,              -- UUID for token record
+    user_id TEXT NOT NULL,            -- Foreign key to users.id
+    token_hash TEXT NOT NULL,         -- SHA256 hash of full token
+    expires_at DATETIME NOT NULL,     -- Token expiration timestamp
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,  -- Token issue time
+    is_revoked BOOLEAN DEFAULT 0,     -- Revocation status (0=active, 1=revoked)
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+```
+
+**Key Features:**
+
+- Foreign key relationship ensures data integrity
+- Token hash stored (not full token) for security
+- Expiration tracking for automatic cleanup
+- Revocation flag for immediate token invalidation
+- Cascade delete removes tokens when user is deleted
+
+#### Database Indexes
+
+Automatic indexes are created for optimal query performance:
+
+```sql
+-- Automatic indexes on PRIMARY KEY and UNIQUE constraints
+-- Additional indexes for common queries:
+CREATE INDEX idx_jwt_tokens_user_id ON jwt_tokens(user_id);
+CREATE INDEX idx_jwt_tokens_expires_at ON jwt_tokens(expires_at);
+CREATE INDEX idx_jwt_tokens_is_revoked ON jwt_tokens(is_revoked);
+```
+
+### 🔍 Token Structure
+
+Tokens use a simple but secure format:
+
+```
+<user_data>|<signature>
+```
+
+Where:
+
+- `user_data`: `userId|username|email|expiry_timestamp`
+- `signature`: SHA256 hash of (user_data + secret_key)
+
+Example token parts:
+
+- Data: `123e4567-e89b-12d3-a456-426614174000|john|john@example.com|1640995200`
+- Signature: `a1b2c3d4e5f6...` (SHA256 hash)
+
 ## Features
 
 ### Backend (Ballerina)
-- **Secure JWT Authentication**: Real JWT tokens with RSA signing
-- **Password Security**: BCrypt password hashing
-- **Database Storage**: MySQL database for persistent user data
-- **Token Management**: JWT tokens stored and tracked in database
-- **Token Revocation**: Logout revokes tokens in database
+
+- **Secure Authentication**: Custom JWT-like tokens with cryptographic signing
+- **Password Security**: SHA256 password hashing with salt
+- **SQLite Database**: Lightweight, file-based database for development
+- **Token Management**: Database tracking of all issued tokens
+- **Token Revocation**: Immediate token invalidation on logout
 - **Input Validation**: Email format and password strength validation
-- **Protected Endpoints**: JWT validation for secure routes
+- **Protected Endpoints**: Token validation for secure routes
 - **CORS Support**: Configured for frontend integration
-- **Token Cleanup**: Automatic cleanup of expired tokens
+- **Auto-initialization**: Database schema created automatically
 
 ### Frontend (Next.js)
+
 - **React Authentication**: Components for login/register/profile
 - **Auth Context**: Global authentication state management
 - **Token Expiry Handling**: Automatic token expiration detection
@@ -48,50 +185,22 @@ A full-stack application with secure JWT authentication using Ballerina backend,
 - **Ballerina**: Swan Lake (2201.10.0 or later)
 - **Node.js**: 18.x or later
 - **Java**: 11 or later (for Ballerina)
-- **MySQL**: 8.0 or later
-- **MySQL Connector**: Included in dependencies
+- **SQLite**: Included with Ballerina (no separate installation needed)
 
 ## Quick Start
 
-### Step 1: Database Setup
-
-**Windows:**
-```bash
-setup-database.bat
-```
-
-**Unix/Linux/macOS:**
-```bash
-./setup-database.sh
-```
-
-Or manually:
-```sql
-mysql -u root -p < ballerina-backend/database/schema.sql
-```
-
-### Step 2: Configure Database
-
-Update `ballerina-backend/Config.toml` with your MySQL credentials:
-```toml
-[userportal.auth_service.database]
-host = "localhost"
-port = 3306
-name = "userportal"
-username = "your_mysql_username"
-password = "your_mysql_password"
-```
-
-### Step 3: Start Services
+### Step 1: Start Services (Database auto-creates)
 
 **Option 1: Use Startup Scripts**
 
 **Windows:**
+
 ```bash
 start-services.bat
 ```
 
 **Unix/Linux/macOS:**
+
 ```bash
 ./start-services.sh
 ```
@@ -99,12 +208,14 @@ start-services.bat
 **Option 2: Manual Setup**
 
 1. **Start the Ballerina backend:**
+
    ```bash
    cd ballerina-backend
    bal run
    ```
 
 2. **Start the Next.js frontend:**
+
    ```bash
    cd userportal
    npm install
@@ -119,18 +230,21 @@ start-services.bat
 ## API Endpoints
 
 ### Public Endpoints
+
 - `GET /api/health` - Health check
 - `POST /api/auth/register` - User registration
 - `POST /api/auth/login` - User login
 - `POST /api/auth/logout` - User logout
 
 ### Protected Endpoints
+
 - `GET /api/auth/profile` - Get user profile
 - `PUT /api/auth/profile` - Update user profile
 
 ## Usage Examples
 
 ### 1. Register a new user
+
 ```bash
 curl -X POST http://localhost:8080/api/auth/register \
   -H "Content-Type: application/json" \
@@ -142,6 +256,7 @@ curl -X POST http://localhost:8080/api/auth/register \
 ```
 
 ### 2. Login
+
 ```bash
 curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
@@ -152,6 +267,7 @@ curl -X POST http://localhost:8080/api/auth/login \
 ```
 
 ### 3. Access protected endpoint
+
 ```bash
 curl -X GET http://localhost:8080/api/auth/profile \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
@@ -160,15 +276,19 @@ curl -X GET http://localhost:8080/api/auth/profile \
 ## Frontend Components
 
 ### AuthProvider
+
 Provides authentication context throughout the app.
 
 ### useAuth Hook
+
 Custom hook for managing authentication state:
+
 ```typescript
 const { user, login, logout, register, isAuthenticated } = useAuth();
 ```
 
 ### Components
+
 - `LoginForm` - User login interface
 - `RegisterForm` - User registration interface
 - `UserProfile` - User profile management
@@ -176,6 +296,7 @@ const { user, login, logout, register, isAuthenticated } = useAuth();
 ## Configuration
 
 ### Backend Configuration (Config.toml)
+
 ```toml
 [userportal.auth_service]
 jwtSecret = "your-super-secret-jwt-key"
@@ -183,25 +304,245 @@ jwtExpiryTime = 3600
 port = 8080
 ```
 
-### Database Schema
-The application uses the following database structure:
+## 🔍 Viewing and Managing the Database
 
-**Users Table:**
-- `id`: Unique user identifier (UUID)
-- `username`: Unique username (3-50 characters)
-- `email`: Unique email address (validated format)
-- `password_hash`: BCrypt hashed password
-- `created_at`, `updated_at`: Timestamps
-- `is_active`: Account status
+The SQLite database is located at `ballerina-backend/database/userportal.db` and can be accessed through multiple methods:
 
-**JWT Tokens Table:**
-- `id`: Unique token identifier
-- `user_id`: Reference to users table
-- `token_hash`: SHA256 hash of JWT token
-- `expires_at`: Token expiration timestamp
-- `is_revoked`: Token revocation status
+### Method 1: SQLite Command Line Interface
+
+**Windows:**
+
+```cmd
+cd ballerina-backend\database
+sqlite3 userportal.db
+```
+
+**Unix/Linux/macOS:**
+
+```bash
+cd ballerina-backend/database
+sqlite3 userportal.db
+```
+
+**Essential SQLite Commands:**
+
+```sql
+.help                      -- Show all available commands
+.tables                    -- List all tables in database
+.schema                    -- Show complete database schema
+.schema users              -- Show users table structure only
+.schema jwt_tokens         -- Show tokens table structure only
+.headers on                -- Show column headers in results
+.mode column               -- Format output in columns
+.width 10 20 30            -- Set column widths for better display
+SELECT * FROM users;       -- View all user records
+SELECT * FROM jwt_tokens;  -- View all token records
+.quit                      -- Exit SQLite
+```
+
+### Method 2: DB Browser for SQLite (Recommended GUI)
+
+1. **Download and Install:**
+
+   - Visit https://sqlitebrowser.org/
+   - Download for your operating system
+   - Install following standard procedures
+
+2. **Open Database:**
+
+   - Launch DB Browser for SQLite
+   - Click "Open Database" button
+   - Navigate to `ballerina-backend/database/userportal.db`
+   - Browse tables, run queries, and modify data visually
+
+3. **Features:**
+   - Visual table browsing with sorting and filtering
+   - SQL query editor with syntax highlighting
+   - Database structure visualization
+   - Export data to various formats (CSV, JSON, etc.)
+
+### Method 3: VS Code SQLite Extension
+
+1. **Install Extension:**
+
+   - Open VS Code Extensions panel (Ctrl+Shift+X)
+   - Search for "SQLite Viewer" or "SQLite"
+   - Install a popular SQLite extension
+
+2. **Open Database:**
+   - In VS Code Explorer, navigate to `ballerina-backend/database/`
+   - Right-click on `userportal.db`
+   - Select "Open Database" or similar option
+   - Browse tables and run queries within VS Code
+
+### Method 4: Quick View Script
+
+**Windows:**
+
+```cmd
+.\view-database.bat
+```
+
+This script will:
+
+- Show database file location and size
+- Display basic database information
+- Open SQLite CLI if available on system
+- Provide helpful commands for database exploration
+
+### Method 5: Online SQLite Viewers
+
+For quick inspection without installing software:
+
+1. Visit online SQLite viewers (search "online sqlite viewer")
+2. Upload your `userportal.db` file
+3. Browse tables and run queries in browser
+4. **Note:** Only use trusted sites and avoid uploading sensitive production data
+
+### Essential Database Queries
+
+#### User Management Queries
+
+```sql
+-- View all users (excluding sensitive password hash)
+SELECT id, username, email, created_at, updated_at, is_active
+FROM users
+ORDER BY created_at DESC;
+
+-- Count total registered users
+SELECT COUNT(*) as total_users FROM users;
+
+-- Find users by email domain
+SELECT username, email, created_at
+FROM users
+WHERE email LIKE '%@gmail.com';
+
+-- Check for inactive users
+SELECT username, email, created_at
+FROM users
+WHERE is_active = 0;
+```
+
+#### Token Management Queries
+
+```sql
+-- View active tokens with user information
+SELECT
+    u.username,
+    u.email,
+    jt.created_at as token_issued,
+    jt.expires_at as token_expires,
+    jt.is_revoked
+FROM jwt_tokens jt
+JOIN users u ON jt.user_id = u.id
+WHERE jt.is_revoked = 0
+ORDER BY jt.created_at DESC;
+
+-- Count active vs revoked tokens
+SELECT
+    is_revoked,
+    COUNT(*) as token_count
+FROM jwt_tokens
+GROUP BY is_revoked;
+
+-- Find expired tokens that should be cleaned up
+SELECT COUNT(*) as expired_tokens
+FROM jwt_tokens
+WHERE expires_at < datetime('now') AND is_revoked = 0;
+
+-- View token activity for specific user
+SELECT
+    jt.created_at as issued,
+    jt.expires_at as expires,
+    jt.is_revoked as revoked
+FROM jwt_tokens jt
+JOIN users u ON jt.user_id = u.id
+WHERE u.username = 'your_username'
+ORDER BY jt.created_at DESC;
+```
+
+#### System Analytics Queries
+
+```sql
+-- Database overview statistics
+SELECT
+    (SELECT COUNT(*) FROM users) as total_users,
+    (SELECT COUNT(*) FROM jwt_tokens) as total_tokens,
+    (SELECT COUNT(*) FROM jwt_tokens WHERE is_revoked = 0) as active_tokens,
+    (SELECT COUNT(*) FROM jwt_tokens WHERE expires_at < datetime('now')) as expired_tokens;
+
+-- User registration trends (by day)
+SELECT
+    DATE(created_at) as registration_date,
+    COUNT(*) as new_users
+FROM users
+GROUP BY DATE(created_at)
+ORDER BY registration_date DESC
+LIMIT 10;
+
+-- Token usage patterns
+SELECT
+    DATE(created_at) as date,
+    COUNT(*) as tokens_issued
+FROM jwt_tokens
+GROUP BY DATE(created_at)
+ORDER BY date DESC
+LIMIT 10;
+```
+
+#### Database Maintenance Queries
+
+```sql
+-- Clean up expired tokens (DELETE operation)
+DELETE FROM jwt_tokens
+WHERE expires_at < datetime('now') AND is_revoked = 1;
+
+-- Revoke all tokens for a specific user
+UPDATE jwt_tokens
+SET is_revoked = 1
+WHERE user_id = (SELECT id FROM users WHERE username = 'username_to_revoke');
+
+-- Check database integrity
+PRAGMA integrity_check;
+
+-- View database file size and page info
+PRAGMA page_count;
+PRAGMA page_size;
+```
+
+### Database Backup and Restore
+
+#### Create Backup
+
+```bash
+# Create backup copy
+cp ballerina-backend/database/userportal.db userportal_backup_$(date +%Y%m%d).db
+
+# Or using SQLite dump
+sqlite3 ballerina-backend/database/userportal.db .dump > userportal_backup.sql
+```
+
+#### Restore from Backup
+
+```bash
+# Restore from file copy
+cp userportal_backup_20240101.db ballerina-backend/database/userportal.db
+
+# Or restore from SQL dump
+sqlite3 ballerina-backend/database/userportal.db < userportal_backup.sql
+```
+
+### Database Security Notes
+
+- Database file contains sensitive user information
+- Password hashes are stored but still should be protected
+- Token hashes could potentially be used maliciously if exposed
+- Always backup before making structural changes
+- Consider encrypting database file in production environments
+- Limit file system access to database directory
 
 ### Frontend Configuration (.env.local)
+
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:8080/api
 ```
@@ -209,6 +550,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8080/api
 ## Security Features
 
 ### ✅ Implemented Security Measures
+
 - **Real JWT Tokens**: RSA-based JWT signing with proper validation
 - **Password Hashing**: BCrypt hashing for secure password storage
 - **Database Storage**: User data and tokens stored in MySQL database
@@ -220,6 +562,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8080/api
 - **Token Cleanup**: Automatic cleanup of expired/revoked tokens
 
 ### 🔒 Security Best Practices
+
 - Passwords never stored in plain text
 - JWT tokens are cryptographically signed
 - Tokens tracked in database for revocation
@@ -230,23 +573,27 @@ NEXT_PUBLIC_API_URL=http://localhost:8080/api
 ## Development
 
 ### Backend Development
+
 ```bash
 cd ballerina-backend
 bal run --observability-included
 ```
 
 ### Frontend Development
+
 ```bash
 cd userportal
 npm run dev
 ```
 
 ### Testing the API
+
 Use the provided curl examples or tools like Postman to test the API endpoints.
 
 ## Production Considerations
 
 ### ✅ Already Implemented
+
 - ✅ Real JWT tokens with RSA signing
 - ✅ BCrypt password hashing
 - ✅ MySQL database with proper schema
@@ -257,6 +604,7 @@ Use the provided curl examples or tools like Postman to test the API endpoints.
 ### 🚀 Additional Production Requirements
 
 1. **Security Enhancements:**
+
    - Use HTTPS/TLS certificates
    - Implement rate limiting for login attempts
    - Add CSRF protection
@@ -264,18 +612,21 @@ Use the provided curl examples or tools like Postman to test the API endpoints.
    - Enable database SSL connections
 
 2. **Configuration:**
+
    - Use environment variables for sensitive config
    - Change default JWT secret key
    - Set up proper database user with limited privileges
    - Configure secure session management
 
 3. **Monitoring & Logging:**
+
    - Add structured logging
    - Implement health checks and metrics
    - Set up error tracking (e.g., Sentry)
    - Monitor database performance
 
 4. **Infrastructure:**
+
    - Set up proper CI/CD pipeline
    - Configure load balancing
    - Implement database backups
@@ -291,11 +642,13 @@ Use the provided curl examples or tools like Postman to test the API endpoints.
 ### Common Issues
 
 1. **Backend won't start:**
+
    - Check if Java 11+ is installed
    - Verify Ballerina installation
    - Check if port 8080 is available
 
 2. **Frontend can't connect to backend:**
+
    - Verify backend is running on port 8080
    - Check CORS configuration
    - Verify API URL in .env.local
@@ -306,6 +659,7 @@ Use the provided curl examples or tools like Postman to test the API endpoints.
    - Check token expiration
 
 ### Logs
+
 - Backend logs appear in the terminal where `bal run` is executed
 - Frontend logs appear in browser console and terminal
 
