@@ -1,3 +1,21 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Next.js
+userportal/.next/
+userportal/out/
+userportal/build/
+userportal/dist/
+
+# Production builds
+userportal/.vercel
+userportal/.netlify
+
 # Environment variables
 .env
 .env.local
@@ -5,22 +23,25 @@
 .env.test.local
 .env.production.local
 
-# Dependencies
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
-# Next.js
-.next/
-out/
-build/
-dist/
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-# Production builds
-*.tgz
-*.tar.gz
+# Logs
+logs
+*.log
 
 # Runtime data
 pids
@@ -35,26 +56,141 @@ coverage/
 # nyc test coverage
 .nyc_output
 
-# Logs
-logs
-*.log
+# Dependency directories
+jspm_packages/
 
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
+# Optional npm cache directory
+.npm
 
-# IDE files
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+# Optional eslint cache
+.eslintcache
 
-# Temporary files
-*.tmp
-*.temp
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# Next.js build output
+.next
+
+# Nuxt.js build / generate output
+.nuxt
+dist
+
+# Storybook build outputs
+.out
+.storybook-out
+
+# Temporary folders
+tmp/
+temp/
+
+# Ballerina specific files
+ballerina-backend/target/
+ballerina-backend/Dependencies.toml
+ballerina-backend/Ballerina.lock
+ballerina-backend/.ballerina/
+ballerina-backend/build/
+ballerina-backend/bin/
+ballerina-backend/libs/
+ballerina-backend/generated/
+ballerina-backend/cache/
+
+# Ballerina observability
+ballerina-backend/observability-symbols.json
+
+# Ballerina test reports
+ballerina-backend/test-results/
+ballerina-backend/coverage/
+
+# Ballerina compiler generated files
+ballerina-backend/*.jar
+ballerina-backend/*.class
+
+# Java related (for Ballerina runtime)
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Security sensitive files
+*.p12
+*.jks
+*.keystore
+*.truststore
+*.pem
+*.key
+*.crt
+*.cert
+
+# But keep the generated keystore for development
+!ballerina-backend/resources/keystore.p12
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Database files (if using local databases)
+*.db
+*.sqlite
+*.sqlite3
+
+# Docker
+.dockerignore
+Dockerfile
+docker-compose.yml
+docker-compose.override.yml
+
+# Kubernetes
+*.yaml
+*.yml
+k8s/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Local configuration overrides
+Config.local.toml
+config.local.json
+
+# Test artifacts
+test-output/
+test-reports/
+
+# Package files
+*.deb
+*.rpm
+
+# Compiled binary addons
+build/Release/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional stylelint cache
+.stylelintcache
+
+# SvelteKit build / generate output
+.svelte-kit
+
+# End of https://www.gitignore.io/api/node,java,ballerina
