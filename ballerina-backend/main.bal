@@ -11,26 +11,25 @@ type User record {
 
 map<User> users = {};
 
-function addCorsHeaders(http:Response res) {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
-    res.setHeader("Access-Control-Allow-Credentials", "true");
-}
 
+
+@http:ServiceConfig {
+    cors: {
+        allowOrigins: ["http://localhost:3001"],
+        allowCredentials: true,
+        allowHeaders: ["Authorization", "Content-Type"],
+        allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    }
+}
 service /api on new http:Listener(8080) {
 
-    resource function get health() returns http:Response {
-        http:Response res = new;
-        addCorsHeaders(res);
-        res.setJsonPayload({"status": "healthy", "service": "userportal-auth"});
-        return res;
+    resource function get health() returns json {
+        return {"status": "healthy", "service": "userportal-auth"};
     }
 
     resource function post auth/register(@http:Payload json payload) returns http:Response {
         http:Response res = new;
-        addCorsHeaders(res);
-
+        
         json|error usernameField = payload.username;
         json|error emailField = payload.email;
         json|error passwordField = payload.password;
@@ -73,8 +72,7 @@ service /api on new http:Listener(8080) {
 
     resource function post auth/login(@http:Payload json payload) returns http:Response {
         http:Response res = new;
-        addCorsHeaders(res);
-
+        
         json|error usernameField = payload.username;
         json|error passwordField = payload.password;
 
@@ -119,8 +117,7 @@ service /api on new http:Listener(8080) {
 
     resource function get auth/profile(http:Request req) returns http:Response {
         http:Response res = new;
-        addCorsHeaders(res);
-
+        
         string|http:HeaderNotFoundError authHeader = req.getHeader("Authorization");
         if authHeader is http:HeaderNotFoundError {
             res.statusCode = 401;
@@ -161,8 +158,7 @@ service /api on new http:Listener(8080) {
 
     resource function put auth/profile(http:Request req, @http:Payload json data) returns http:Response {
         http:Response res = new;
-        addCorsHeaders(res);
-
+        
         string|http:HeaderNotFoundError authHeader = req.getHeader("Authorization");
         if authHeader is http:HeaderNotFoundError {
             res.statusCode = 401;
@@ -210,18 +206,7 @@ service /api on new http:Listener(8080) {
         return res;
     }
 
-    resource function post auth/logout() returns http:Response {
-        http:Response res = new;
-        addCorsHeaders(res);
-        res.setJsonPayload({"message": "Logout successful"});
-        return res;
-    }
-
-    // Handle CORS preflight requests
-    resource function options [string... path]() returns http:Response {
-        http:Response res = new;
-        addCorsHeaders(res);
-        res.statusCode = 200;
-        return res;
+    resource function post auth/logout() returns json {
+        return {"message": "Logout successful"};
     }
 }
