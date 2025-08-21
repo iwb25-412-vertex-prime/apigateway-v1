@@ -6,7 +6,7 @@ import ballerina/time;
 
 // JWT configuration
 configurable string jwtSecret = "your-secret-key-change-this-in-production";
-configurable int jwtExpiryTime = 3600; // 1 hour in seconds
+configurable decimal jwtExpiryTime = 3600.0; // 1 hour in seconds
 configurable int port = 8080;
 
 // CORS configuration for frontend
@@ -15,25 +15,6 @@ http:CorsConfig corsConfig = {
     allowCredentials: true,
     allowHeaders: ["Authorization", "Content-Type"],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-};
-
-// JWT issuer configuration
-jwt:IssuerConfig jwtIssuerConfig = {
-    username: "ballerina",
-    issuer: "userportal-auth",
-    audience: ["userportal-frontend"],
-    keyId: "key-1",
-    expTime: jwtExpiryTime,
-    signatureConfig: {
-        config: {
-            keyStore: {
-                path: "resources/keystore.p12",
-                password: "ballerina"
-            },
-            keyAlias: "ballerina",
-            keyPassword: "ballerina"
-        }
-    }
 };
 
 // JWT validator configuration
@@ -79,7 +60,7 @@ type RegisterRequest record {
 // In-memory user store (replace with database in production)
 map<User> users = {};
 
-service /api on new http:Listener(port, config = {cors: corsConfig}) {
+service /api on new http:Listener(port, {cors: corsConfig}) {
 
     // Health check endpoint
     resource function get health() returns json {
@@ -129,9 +110,9 @@ service /api on new http:Listener(port, config = {cors: corsConfig}) {
             return http:UNAUTHORIZED;
         }
 
-        // Generate JWT token
+        // Generate JWT token using HMAC
         jwt:Header header = {
-            alg: jwt:RS256,
+            alg: jwt:HS256,
             typ: "JWT"
         };
 
@@ -139,13 +120,25 @@ service /api on new http:Listener(port, config = {cors: corsConfig}) {
             sub: foundUser.id,
             iss: "userportal-auth",
             aud: ["userportal-frontend"],
-            exp: time:utcNow()[0] + jwtExpiryTime,
-            iat: time:utcNow()[0],
+            exp: <decimal>time:utcNow()[0] + jwtExpiryTime,
+            iat: <decimal>time:utcNow()[0],
             username: foundUser.username,
             email: foundUser.email
         };
 
-        string|jwt:Error token = jwt:issue(jwtIssuerConfig, payload, header);
+        // Use HMAC-based signing for simplicity
+        jwt:IssuerConfig issuerConfig = {
+            username: "ballerina",
+            issuer: "userportal-auth",
+            audience: ["userportal-frontend"],
+            keyId: "key-1",
+            expTime: jwtExpiryTime,
+            signatureConfig: {
+                config: jwtSecret
+            }
+        };
+
+        string|jwt:Error token = jwt:issue(issuerConfig, payload);
         
         if token is jwt:Error {
             log:printError("Error generating JWT token", token);
@@ -167,13 +160,6 @@ service /api on new http:Listener(port, config = {cors: corsConfig}) {
     }
 
     // Protected endpoint - Get user profile
-    @http:ResourceConfig {
-        auth: [
-            {
-                jwtValidatorConfig: jwtValidatorConfig
-            }
-        ]
-    }
     resource function get auth/profile(http:Request req) returns json|http:Unauthorized|http:InternalServerError {
         jwt:Payload|http:Unauthorized jwtPayload = getJwtPayload(req);
         
@@ -181,8 +167,8 @@ service /api on new http:Listener(port, config = {cors: corsConfig}) {
             return jwtPayload;
         }
 
-        string? userId = jwtPayload.sub;
-        if userId is () {
+        string|error userId = jwtPayload.sub.ensureType();
+        if userId is error {
             return http:UNAUTHORIZED;
         }
 
@@ -200,13 +186,6 @@ service /api on new http:Listener(port, config = {cors: corsConfig}) {
     }
 
     // Protected endpoint - Update user profile
-    @http:ResourceConfig {
-        auth: [
-            {
-                jwtValidatorConfig: jwtValidatorConfig
-            }
-        ]
-    }
     resource function put auth/profile(http:Request req, json updateData) returns json|http:Unauthorized|http:BadRequest {
         jwt:Payload|http:Unauthorized jwtPayload = getJwtPayload(req);
         
@@ -214,8 +193,8 @@ service /api on new http:Listener(port, config = {cors: corsConfig}) {
             return jwtPayload;
         }
 
-        string? userId = jwtPayload.sub;
-        if userId is () {
+        string|error userId = jwtPayload.sub.ensureType();
+        if userId is error {
             return http:UNAUTHORIZED;
         }
 
@@ -225,8 +204,9 @@ service /api on new http:Listener(port, config = {cors: corsConfig}) {
         }
 
         // Update user data (basic implementation)
-        if updateData.email is string {
-            user.email = <string>updateData.email;
+        json emailField = updateData.email;
+        if emailField is string {
+            user.email = emailField;
         }
         
         users[userId] = user;
@@ -262,7 +242,17 @@ function getJwtPayload(http:Request req) returns jwt:Payload|http:Unauthorized {
     }
 
     string token = authHeader.substring(7);
-    jwt:Payload|jwt:Error payload = jwt:validate(token, jwtValidatorConfig);
+    
+    // Use HMAC-based validation for simplicity
+    jwt:ValidatorConfig validatorConfig = {
+        issuer: "userportal-auth",
+        audience: ["userportal-frontend"],
+        signatureConfig: {
+            config: jwtSecret
+        }
+    };
+    
+    jwt:Payload|jwt:Error payload = jwt:validate(token, validatorConfig);
     
     if payload is jwt:Error {
         log:printError("JWT validation failed", payload);
