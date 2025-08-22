@@ -75,9 +75,147 @@ The application implements a secure JWT-like authentication system with database
 - **Input Validation**: Email format and password strength validation
 - **CORS Protection**: Configured for specific origins only
 
+## � APIa Key Management System
+
+The application includes a comprehensive API key management system that allows users to create, manage, and use API keys for programmatic access.
+
+### Key Features
+
+- **Limited Keys**: Each user can create up to 3 API keys maximum
+- **Named Keys**: Each API key has a descriptive name for easy identification
+- **Usage Tracking**: Track how many times each API key has been used
+- **Rules System**: Define custom rules/permissions for each API key
+- **Status Management**: Enable/disable API keys without deletion
+- **Secure Generation**: Cryptographically secure API key generation with `ak_` prefix
+- **Revocation**: Permanently revoke API keys when no longer needed
+
+### API Key Structure
+
+API keys follow the format: `ak_[32-character-hash]`
+
+Example: `ak_a1b2c3d4e5f6789012345678901234567890abcd`
+
+### API Key Properties
+
+Each API key contains:
+
+- **ID**: Unique identifier for the key
+- **Name**: User-defined descriptive name (1-100 characters)
+- **Description**: Optional detailed description
+- **Rules**: Array of permission strings (e.g., ["read", "write", "analytics"])
+- **Status**: "active", "inactive", or "revoked"
+- **Usage Count**: Number of times the key has been used
+- **Created/Updated**: Timestamps for audit trail
+
+### API Key Endpoints
+
+#### Create API Key
+```bash
+POST /api/apikeys
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+
+{
+  "name": "Development Key",
+  "description": "For development testing",
+  "rules": ["read", "write"]
+}
+```
+
+#### List User's API Keys
+```bash
+GET /api/apikeys
+Authorization: Bearer <jwt_token>
+```
+
+#### Update API Key Status
+```bash
+PUT /api/apikeys/{keyId}/status
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+
+{
+  "status": "inactive"  // or "active"
+}
+```
+
+#### Delete API Key
+```bash
+DELETE /api/apikeys/{keyId}
+Authorization: Bearer <jwt_token>
+```
+
+#### Validate API Key
+```bash
+POST /api/apikeys/validate
+Content-Type: application/json
+
+{
+  "apiKey": "ak_your_api_key_here"
+}
+```
+
+### Usage Examples
+
+1. **Create a development API key:**
+   ```bash
+   curl -X POST http://localhost:8080/api/apikeys \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+     -d '{
+       "name": "Dev Environment",
+       "description": "For local development",
+       "rules": ["read", "write", "test"]
+     }'
+   ```
+
+2. **List all your API keys:**
+   ```bash
+   curl -X GET http://localhost:8080/api/apikeys \
+     -H "Authorization: Bearer YOUR_JWT_TOKEN"
+   ```
+
+3. **Disable an API key:**
+   ```bash
+   curl -X PUT http://localhost:8080/api/apikeys/KEY_ID/status \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+     -d '{"status": "inactive"}'
+   ```
+
+4. **Test API key validity:**
+   ```bash
+   curl -X POST http://localhost:8080/api/apikeys/validate \
+     -H "Content-Type: application/json" \
+     -d '{"apiKey": "ak_a1b2c3d4e5f6789012345678901234567890abcd"}'
+   ```
+
+### Testing API Keys
+
+Use the provided test scripts to test the API key functionality:
+
+**Windows:**
+```bash
+test-apikeys.bat
+```
+
+**Unix/Linux/macOS:**
+```bash
+chmod +x test-apikeys.sh
+./test-apikeys.sh
+```
+
+These scripts will:
+1. Register a test user
+2. Login to get a JWT token
+3. Create 3 API keys (maximum allowed)
+4. Try to create a 4th key (should fail)
+5. List all API keys
+6. Test API key validation
+
 ### 🗄️ Database Schema
 
-The application uses SQLite database with two main tables for user management and token tracking:
+The application uses SQLite database with three main tables for user management, token tracking, and API key management:
 
 #### Users Table
 
@@ -127,6 +265,35 @@ CREATE TABLE jwt_tokens (
 - Revocation flag for immediate token invalidation
 - Cascade delete removes tokens when user is deleted
 
+#### API Keys Table
+
+Manages user API keys for programmatic access:
+
+```sql
+CREATE TABLE api_keys (
+    id TEXT PRIMARY KEY,              -- UUID for API key record
+    user_id TEXT NOT NULL,            -- Foreign key to users.id
+    name TEXT NOT NULL,               -- User-defined name for the key
+    key_hash TEXT NOT NULL,           -- SHA256 hash of the API key
+    description TEXT,                 -- Optional description
+    rules TEXT,                       -- JSON array of permission rules
+    status TEXT DEFAULT 'active',     -- Status: active, inactive, revoked
+    usage_count INTEGER DEFAULT 0,    -- Number of times key has been used
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,  -- Key creation time
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,  -- Last modification time
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+```
+
+**Key Features:**
+
+- Foreign key relationship ensures data integrity
+- API key hash stored (not plain key) for security
+- JSON rules array for flexible permission system
+- Usage tracking for monitoring and analytics
+- Status management for key lifecycle
+- Cascade delete removes keys when user is deleted
+
 #### Database Indexes
 
 Automatic indexes are created for optimal query performance:
@@ -137,6 +304,9 @@ Automatic indexes are created for optimal query performance:
 CREATE INDEX idx_jwt_tokens_user_id ON jwt_tokens(user_id);
 CREATE INDEX idx_jwt_tokens_expires_at ON jwt_tokens(expires_at);
 CREATE INDEX idx_jwt_tokens_is_revoked ON jwt_tokens(is_revoked);
+CREATE INDEX idx_api_keys_user_id ON api_keys(user_id);
+CREATE INDEX idx_api_keys_status ON api_keys(status);
+CREATE INDEX idx_api_keys_key_hash ON api_keys(key_hash);
 ```
 
 ### 🔍 Token Structure
@@ -166,6 +336,7 @@ Example token parts:
 - **SQLite Database**: Lightweight, file-based database for development
 - **Token Management**: Database tracking of all issued tokens
 - **Token Revocation**: Immediate token invalidation on logout
+- **API Key Management**: Create, manage, and validate API keys (up to 3 per user)
 - **Input Validation**: Email format and password strength validation
 - **Protected Endpoints**: Token validation for secure routes
 - **CORS Support**: Configured for frontend integration
@@ -235,11 +406,16 @@ start-services.bat
 - `POST /api/auth/register` - User registration
 - `POST /api/auth/login` - User login
 - `POST /api/auth/logout` - User logout
+- `POST /api/apikeys/validate` - Validate API key
 
-### Protected Endpoints
+### Protected Endpoints (Require JWT Token)
 
 - `GET /api/auth/profile` - Get user profile
 - `PUT /api/auth/profile` - Update user profile
+- `POST /api/apikeys` - Create new API key
+- `GET /api/apikeys` - List user's API keys
+- `PUT /api/apikeys/{keyId}/status` - Update API key status
+- `DELETE /api/apikeys/{keyId}` - Delete (revoke) API key
 
 ## Usage Examples
 
@@ -271,6 +447,36 @@ curl -X POST http://localhost:8080/api/auth/login \
 ```bash
 curl -X GET http://localhost:8080/api/auth/profile \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+### 4. Create API key
+
+```bash
+curl -X POST http://localhost:8080/api/apikeys \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "Development Key",
+    "description": "For development testing",
+    "rules": ["read", "write"]
+  }'
+```
+
+### 5. List API keys
+
+```bash
+curl -X GET http://localhost:8080/api/apikeys \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+### 6. Validate API key
+
+```bash
+curl -X POST http://localhost:8080/api/apikeys/validate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "apiKey": "ak_your_api_key_here"
+  }'
 ```
 
 ## Frontend Components
@@ -490,6 +696,64 @@ ORDER BY date DESC
 LIMIT 10;
 ```
 
+#### API Key Management Queries
+
+```sql
+-- View all API keys with user information
+SELECT
+    u.username,
+    u.email,
+    ak.name as key_name,
+    ak.description,
+    ak.status,
+    ak.usage_count,
+    ak.created_at,
+    ak.updated_at
+FROM api_keys ak
+JOIN users u ON ak.user_id = u.id
+WHERE ak.status != 'revoked'
+ORDER BY ak.created_at DESC;
+
+-- Count API keys by status
+SELECT
+    status,
+    COUNT(*) as key_count
+FROM api_keys
+GROUP BY status;
+
+-- Find users with maximum API keys (3)
+SELECT
+    u.username,
+    u.email,
+    COUNT(ak.id) as key_count
+FROM users u
+JOIN api_keys ak ON u.id = ak.user_id
+WHERE ak.status != 'revoked'
+GROUP BY u.id, u.username, u.email
+HAVING COUNT(ak.id) >= 3;
+
+-- API key usage statistics
+SELECT
+    ak.name,
+    ak.usage_count,
+    ak.status,
+    u.username
+FROM api_keys ak
+JOIN users u ON ak.user_id = u.id
+ORDER BY ak.usage_count DESC;
+
+-- Find inactive API keys that could be cleaned up
+SELECT
+    u.username,
+    ak.name,
+    ak.status,
+    ak.updated_at
+FROM api_keys ak
+JOIN users u ON ak.user_id = u.id
+WHERE ak.status = 'inactive'
+AND ak.updated_at < datetime('now', '-30 days');
+```
+
 #### Database Maintenance Queries
 
 ```sql
@@ -501,6 +765,16 @@ WHERE expires_at < datetime('now') AND is_revoked = 1;
 UPDATE jwt_tokens
 SET is_revoked = 1
 WHERE user_id = (SELECT id FROM users WHERE username = 'username_to_revoke');
+
+-- Revoke all API keys for a specific user
+UPDATE api_keys
+SET status = 'revoked', updated_at = CURRENT_TIMESTAMP
+WHERE user_id = (SELECT id FROM users WHERE username = 'username_to_revoke');
+
+-- Clean up old revoked API keys (optional)
+DELETE FROM api_keys
+WHERE status = 'revoked'
+AND updated_at < datetime('now', '-90 days');
 
 -- Check database integrity
 PRAGMA integrity_check;
