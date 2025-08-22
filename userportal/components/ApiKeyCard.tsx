@@ -77,11 +77,60 @@ export function ApiKeyCard({ apiKey, onUpdateStatus, onDelete }: ApiKeyCardProps
             <p className="text-gray-600 mb-3">{apiKey.description}</p>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <div>
-              <dt className="text-sm font-medium text-gray-500">Usage Count</dt>
+              <dt className="text-sm font-medium text-gray-500">Total Usage</dt>
               <dd className="text-lg font-semibold text-gray-900">{apiKey.usage_count}</dd>
             </div>
+            <div>
+              <dt className="text-sm font-medium text-gray-500">This Month</dt>
+              <dd className="text-lg font-semibold text-gray-900">
+                {apiKey.current_month_usage} / {apiKey.monthly_quota}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-sm font-medium text-gray-500">Remaining</dt>
+              <dd className={`text-lg font-semibold ${
+                apiKey.remaining_quota <= 10 ? 'text-red-600' : 
+                apiKey.remaining_quota <= 25 ? 'text-yellow-600' : 'text-green-600'
+              }`}>
+                {apiKey.remaining_quota}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-sm font-medium text-gray-500">Quota Resets</dt>
+              <dd className="text-sm text-gray-900">{formatDate(apiKey.quota_reset_date)}</dd>
+            </div>
+          </div>
+
+          {/* Quota Progress Bar */}
+          <div className="mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-medium text-gray-500">Monthly Quota Usage</span>
+              <span className="text-sm text-gray-600">
+                {Math.round((apiKey.current_month_usage / apiKey.monthly_quota) * 100)}%
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  apiKey.current_month_usage >= apiKey.monthly_quota ? 'bg-red-500' :
+                  apiKey.current_month_usage >= apiKey.monthly_quota * 0.8 ? 'bg-yellow-500' :
+                  'bg-green-500'
+                }`}
+                style={{
+                  width: `${Math.min((apiKey.current_month_usage / apiKey.monthly_quota) * 100, 100)}%`
+                }}
+              ></div>
+            </div>
+            {apiKey.current_month_usage >= apiKey.monthly_quota && (
+              <p className="text-sm text-red-600 mt-1">
+                ⚠️ Monthly quota exceeded. API requests will be rejected until quota resets.
+              </p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
               <dt className="text-sm font-medium text-gray-500">Created</dt>
               <dd className="text-sm text-gray-900">{formatDate(apiKey.created_at)}</dd>

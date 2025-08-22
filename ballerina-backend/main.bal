@@ -52,6 +52,9 @@ type ApiKey record {|
     string[] rules;
     string status; // "active", "inactive", "revoked"
     int usage_count;
+    int monthly_quota; // Monthly request limit (default 100)
+    int current_month_usage; // Usage in current month
+    string quota_reset_date; // When the monthly quota resets
     string created_at;
     string updated_at;
 |};
@@ -63,6 +66,10 @@ type ApiKeyResponse record {|
     string[] rules;
     string status;
     int usage_count;
+    int monthly_quota;
+    int current_month_usage;
+    int remaining_quota;
+    string quota_reset_date;
     string created_at;
     string updated_at;
 |};
@@ -190,6 +197,9 @@ function initializeDatabase(jdbc:Client dbClient) returns error? {
             rules TEXT, -- JSON array stored as string
             status TEXT DEFAULT 'active',
             usage_count INTEGER DEFAULT 0,
+            monthly_quota INTEGER DEFAULT 100,
+            current_month_usage INTEGER DEFAULT 0,
+            quota_reset_date TEXT DEFAULT (date('now', 'start of month', '+1 month')),
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -311,6 +321,7 @@ function hashApiKey(string apiKey) returns string {
 }
 
 function toApiKeyResponse(ApiKey apiKey) returns ApiKeyResponse {
+    int remainingQuota = apiKey.monthly_quota - apiKey.current_month_usage;
     return {
         id: apiKey.id,
         name: apiKey.name,
@@ -318,6 +329,10 @@ function toApiKeyResponse(ApiKey apiKey) returns ApiKeyResponse {
         rules: apiKey.rules,
         status: apiKey.status,
         usage_count: apiKey.usage_count,
+        monthly_quota: apiKey.monthly_quota,
+        current_month_usage: apiKey.current_month_usage,
+        remaining_quota: remainingQuota < 0 ? 0 : remainingQuota,
+        quota_reset_date: apiKey.quota_reset_date,
         created_at: apiKey.created_at,
         updated_at: apiKey.updated_at
     };
@@ -336,9 +351,27 @@ function createApiKey(string userId, string name, string? description, string[] 
     string keyHash = hashApiKey(apiKey);
     string rulesJson = rules.toJsonString();
     
+    // Calculate next month's first day for quota reset
+    time:Utc currentTime = time:utcNow();
+    time:Civil currentCivil = time:utcToCivil(currentTime);
+    time:Civil nextMonth = {
+        year: currentCivil.month == 12 ? currentCivil.year + 1 : currentCivil.year,
+        month: currentCivil.month == 12 ? 1 : currentCivil.month + 1,
+        day: 1,
+        hour: 0,
+        minute: 0,
+        second: 0
+    };
+    time:Utc|time:Error quotaResetResult = time:utcFromCivil(nextMonth);
+    if quotaResetResult is time:Error {
+        return error("Failed to calculate quota reset date");
+    }
+    time:Utc quotaResetUtc = quotaResetResult;
+    string quotaResetDate = time:utcToString(quotaResetUtc);
+    
     sql:ExecutionResult result = check dbClient->execute(`
-        INSERT INTO api_keys (id, user_id, name, key_hash, description, rules, status, usage_count)
-        VALUES (${apiKeyId}, ${userId}, ${name}, ${keyHash}, ${description}, ${rulesJson}, 'active', 0)
+        INSERT INTO api_keys (id, user_id, name, key_hash, description, rules, status, usage_count, monthly_quota, current_month_usage, quota_reset_date)
+        VALUES (${apiKeyId}, ${userId}, ${name}, ${keyHash}, ${description}, ${rulesJson}, 'active', 0, 100, 0, ${quotaResetDate})
     `);
     
     if result.affectedRowCount == 1 {
@@ -372,10 +405,13 @@ function getApiKeyById(string keyId) returns ApiKey|error {
         string rules;
         string status;
         int usage_count;
+        int monthly_quota;
+        int current_month_usage;
+        string quota_reset_date;
         string created_at;
         string updated_at;
     |}|sql:Error result = dbClient->queryRow(`
-        SELECT id, user_id, name, key_hash, description, rules, status, usage_count, created_at, updated_at
+        SELECT id, user_id, name, key_hash, description, rules, status, usage_count, monthly_quota, current_month_usage, quota_reset_date, created_at, updated_at
         FROM api_keys WHERE id = ${keyId}
     `);
     
@@ -395,6 +431,9 @@ function getApiKeyById(string keyId) returns ApiKey|error {
         rules: rulesArray,
         status: result.status,
         usage_count: result.usage_count,
+        monthly_quota: result.monthly_quota,
+        current_month_usage: result.current_month_usage,
+        quota_reset_date: result.quota_reset_date,
         created_at: result.created_at,
         updated_at: result.updated_at
     };
@@ -410,10 +449,13 @@ function getApiKeysByUserId(string userId) returns ApiKey[]|error {
         string rules;
         string status;
         int usage_count;
+        int monthly_quota;
+        int current_month_usage;
+        string quota_reset_date;
         string created_at;
         string updated_at;
     |}, sql:Error?> resultStream = dbClient->query(`
-        SELECT id, user_id, name, key_hash, description, rules, status, usage_count, created_at, updated_at
+        SELECT id, user_id, name, key_hash, description, rules, status, usage_count, monthly_quota, current_month_usage, quota_reset_date, created_at, updated_at
         FROM api_keys WHERE user_id = ${userId} AND status != 'revoked'
         ORDER BY created_at DESC
     `);
@@ -432,6 +474,9 @@ function getApiKeysByUserId(string userId) returns ApiKey[]|error {
                 rules: rulesArray,
                 status: row.status,
                 usage_count: row.usage_count,
+                monthly_quota: row.monthly_quota,
+                current_month_usage: row.current_month_usage,
+                quota_reset_date: row.quota_reset_date,
                 created_at: row.created_at,
                 updated_at: row.updated_at
             });
@@ -452,10 +497,13 @@ function validateApiKey(string apiKey) returns ApiKey|error {
         string rules;
         string status;
         int usage_count;
+        int monthly_quota;
+        int current_month_usage;
+        string quota_reset_date;
         string created_at;
         string updated_at;
     |}|sql:Error result = dbClient->queryRow(`
-        SELECT id, user_id, name, key_hash, description, rules, status, usage_count, created_at, updated_at
+        SELECT id, user_id, name, key_hash, description, rules, status, usage_count, monthly_quota, current_month_usage, quota_reset_date, created_at, updated_at
         FROM api_keys WHERE key_hash = ${keyHash} AND status = 'active'
     `);
     
@@ -475,6 +523,9 @@ function validateApiKey(string apiKey) returns ApiKey|error {
         rules: rulesArray,
         status: result.status,
         usage_count: result.usage_count,
+        monthly_quota: result.monthly_quota,
+        current_month_usage: result.current_month_usage,
+        quota_reset_date: result.quota_reset_date,
         created_at: result.created_at,
         updated_at: result.updated_at
     };
@@ -483,9 +534,65 @@ function validateApiKey(string apiKey) returns ApiKey|error {
 function incrementApiKeyUsage(string keyId) returns error? {
     _ = check dbClient->execute(`
         UPDATE api_keys 
-        SET usage_count = usage_count + 1, updated_at = CURRENT_TIMESTAMP
+        SET usage_count = usage_count + 1, current_month_usage = current_month_usage + 1, updated_at = CURRENT_TIMESTAMP
         WHERE id = ${keyId}
     `);
+}
+
+function checkQuotaLimit(ApiKey apiKey) returns boolean {
+    // Check if quota needs to be reset
+    time:Utc|error quotaResetTime = time:utcFromString(apiKey.quota_reset_date);
+    if quotaResetTime is error {
+        return false; // If we can't parse the date, assume quota exceeded for safety
+    }
+    
+    time:Utc currentTime = time:utcNow();
+    
+    // If current time is past the reset date, the quota should be reset
+    decimal timeDiff = time:utcDiffSeconds(currentTime, quotaResetTime);
+    if timeDiff >= 0d {
+        // Reset quota for this key
+        error? resetResult = resetMonthlyQuota(apiKey.id);
+        if resetResult is error {
+            return false; // If reset fails, assume quota exceeded for safety
+        }
+        return true; // After reset, quota is available
+    }
+    
+    // Check if current usage is within quota
+    return apiKey.current_month_usage < apiKey.monthly_quota;
+}
+
+function resetMonthlyQuota(string keyId) returns error? {
+    // Calculate next month's first day for new quota reset
+    time:Utc currentTime = time:utcNow();
+    time:Civil currentCivil = time:utcToCivil(currentTime);
+    time:Civil nextMonth = {
+        year: currentCivil.month == 12 ? currentCivil.year + 1 : currentCivil.year,
+        month: currentCivil.month == 12 ? 1 : currentCivil.month + 1,
+        day: 1,
+        hour: 0,
+        minute: 0,
+        second: 0
+    };
+    time:Utc|time:Error quotaResetResult2 = time:utcFromCivil(nextMonth);
+    if quotaResetResult2 is time:Error {
+        return error("Failed to calculate quota reset date");
+    }
+    time:Utc quotaResetUtc = quotaResetResult2;
+    string quotaResetDate = time:utcToString(quotaResetUtc);
+    
+    _ = check dbClient->execute(`
+        UPDATE api_keys 
+        SET current_month_usage = 0, quota_reset_date = ${quotaResetDate}, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ${keyId}
+    `);
+}
+
+function validateApiKeyWithQuota(string apiKey) returns [ApiKey, boolean]|error {
+    ApiKey validatedKey = check validateApiKey(apiKey);
+    boolean quotaAvailable = checkQuotaLimit(validatedKey);
+    return [validatedKey, quotaAvailable];
 }
 
 function updateApiKeyStatus(string keyId, string status) returns error? {
@@ -952,23 +1059,94 @@ service /api on new http:Listener(8080) {
         
         string apiKey = keyField.toString();
         
-        ApiKey|error validationResult = validateApiKey(apiKey);
+        [ApiKey, boolean]|error validationResult = validateApiKeyWithQuota(apiKey);
         if validationResult is error {
             res.statusCode = 401;
             res.setJsonPayload({"error": "Invalid API key"});
             return res;
         }
         
+        [ApiKey, boolean] [validatedKey, quotaAvailable] = validationResult;
+        
+        if !quotaAvailable {
+            res.statusCode = 429; // Too Many Requests
+            res.setJsonPayload({
+                "error": "Monthly quota exceeded",
+                "message": "You have exceeded your monthly quota of 100 requests. Quota resets on: " + validatedKey.quota_reset_date,
+                "apiKey": toApiKeyResponse(validatedKey)
+            });
+            return res;
+        }
+        
         // Increment usage count
-        error? usageResult = incrementApiKeyUsage(validationResult.id);
+        error? usageResult = incrementApiKeyUsage(validatedKey.id);
         if usageResult is error {
             log:printError("Failed to increment API key usage", usageResult);
         }
         
+        // Get updated key data after incrementing usage
+        ApiKey|error updatedKeyResult = getApiKeyById(validatedKey.id);
+        ApiKey updatedKey = updatedKeyResult is error ? validatedKey : updatedKeyResult;
+        
         res.setJsonPayload({
             "valid": true,
-            "apiKey": toApiKeyResponse(validationResult),
+            "apiKey": toApiKeyResponse(updatedKey),
             "message": "API key is valid"
+        });
+        return res;
+    }
+
+    // Endpoint to check quota status without incrementing usage
+    resource function get apikeys/[string keyId]/quota(http:Request req) returns http:Response {
+        http:Response res = new;
+        
+        // Validate JWT token and get user
+        json|error userPayload = validateTokenFromRequest(req);
+        if userPayload is error {
+            res.statusCode = 401;
+            res.setJsonPayload({"error": "Invalid or expired token"});
+            return res;
+        }
+        
+        string|error userIdResult = extractUserId(userPayload);
+        if userIdResult is error {
+            res.statusCode = 401;
+            res.setJsonPayload({"error": "Invalid token claims"});
+            return res;
+        }
+        string userId = userIdResult;
+        
+        // Get API key and verify ownership
+        ApiKey|error apiKey = getApiKeyById(keyId);
+        if apiKey is error {
+            res.statusCode = 404;
+            res.setJsonPayload({"error": "API key not found"});
+            return res;
+        }
+        
+        if apiKey.user_id != userId {
+            res.statusCode = 403;
+            res.setJsonPayload({"error": "Access denied"});
+            return res;
+        }
+        
+        // Check if quota needs reset
+        boolean quotaAvailable = checkQuotaLimit(apiKey);
+        
+        // Get updated key data after potential quota reset
+        ApiKey|error updatedKeyResult = getApiKeyById(keyId);
+        ApiKey updatedKey = updatedKeyResult is error ? apiKey : updatedKeyResult;
+        
+        int remainingQuota = updatedKey.monthly_quota - updatedKey.current_month_usage;
+        
+        res.setJsonPayload({
+            "keyId": keyId,
+            "monthlyQuota": updatedKey.monthly_quota,
+            "currentMonthUsage": updatedKey.current_month_usage,
+            "remainingQuota": remainingQuota < 0 ? 0 : remainingQuota,
+            "quotaResetDate": updatedKey.quota_reset_date,
+            "quotaAvailable": quotaAvailable,
+            "status": updatedKey.status
         });
         return res;
     }
