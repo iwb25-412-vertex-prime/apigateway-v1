@@ -17,7 +17,7 @@ public function hashApiKey(string apiKey) returns string {
 
 // ===== API KEY OPERATIONS =====
 
-public function createApiKey(string userId, string name, string? description, string[] rules) returns [ApiKey, string]|error {
+public function createApiKey(string userId, string name, string? description) returns [ApiKey, string]|error {
     // Check if user already has 3 API keys
     int keyCount = check getApiKeyCountForUser(userId);
     if keyCount >= 3 {
@@ -27,7 +27,6 @@ public function createApiKey(string userId, string name, string? description, st
     string apiKeyId = generateUserId();
     string apiKey = generateApiKey();
     string keyHash = hashApiKey(apiKey);
-    string rulesJson = rules.toJsonString();
     
     // Calculate next month's first day for quota reset (simplified approach)
     time:Utc currentTime = time:utcNow();
@@ -39,8 +38,8 @@ public function createApiKey(string userId, string name, string? description, st
     string quotaResetDate = string `${nextYear}-${nextMonth < 10 ? "0" : ""}${nextMonth}-01`;
     
     sql:ExecutionResult result = check dbClient->execute(`
-        INSERT INTO api_keys (id, user_id, name, key_hash, description, rules, status, usage_count, monthly_quota, current_month_usage, quota_reset_date)
-        VALUES (${apiKeyId}, ${userId}, ${name}, ${keyHash}, ${description}, ${rulesJson}, 'active', 0, 100, 0, ${quotaResetDate})
+        INSERT INTO api_keys (id, user_id, name, key_hash, description, status, usage_count, monthly_quota, current_month_usage, quota_reset_date)
+        VALUES (${apiKeyId}, ${userId}, ${name}, ${keyHash}, ${description}, 'active', 0, 100, 0, ${quotaResetDate})
     `);
     
     if result.affectedRowCount == 1 {
@@ -71,7 +70,6 @@ public function getApiKeyById(string keyId) returns ApiKey|error {
         string name;
         string key_hash;
         string? description;
-        string rules;
         string status;
         int usage_count;
         int monthly_quota;
@@ -80,7 +78,7 @@ public function getApiKeyById(string keyId) returns ApiKey|error {
         string created_at;
         string updated_at;
     |}|sql:Error result = dbClient->queryRow(`
-        SELECT id, user_id, name, key_hash, description, rules, status, usage_count, monthly_quota, current_month_usage, quota_reset_date, created_at, updated_at
+        SELECT id, user_id, name, key_hash, description, status, usage_count, monthly_quota, current_month_usage, quota_reset_date, created_at, updated_at
         FROM api_keys WHERE id = ${keyId}
     `);
     
@@ -88,16 +86,12 @@ public function getApiKeyById(string keyId) returns ApiKey|error {
         return error("API key not found");
     }
     
-    json rulesJson = check result.rules.fromJsonString();
-    string[] rulesArray = check rulesJson.cloneWithType();
-    
     return {
         id: result.id,
         user_id: result.user_id,
         name: result.name,
         key_hash: result.key_hash,
         description: result.description,
-        rules: rulesArray,
         status: result.status,
         usage_count: result.usage_count,
         monthly_quota: result.monthly_quota,
@@ -115,7 +109,6 @@ public function getApiKeysByUserId(string userId) returns ApiKey[]|error {
         string name;
         string key_hash;
         string? description;
-        string rules;
         string status;
         int usage_count;
         int monthly_quota;
@@ -124,7 +117,7 @@ public function getApiKeysByUserId(string userId) returns ApiKey[]|error {
         string created_at;
         string updated_at;
     |}, sql:Error?> resultStream = dbClient->query(`
-        SELECT id, user_id, name, key_hash, description, rules, status, usage_count, monthly_quota, current_month_usage, quota_reset_date, created_at, updated_at
+        SELECT id, user_id, name, key_hash, description, status, usage_count, monthly_quota, current_month_usage, quota_reset_date, created_at, updated_at
         FROM api_keys WHERE user_id = ${userId} AND status != 'revoked'
         ORDER BY created_at DESC
     `);
@@ -132,15 +125,12 @@ public function getApiKeysByUserId(string userId) returns ApiKey[]|error {
     ApiKey[] apiKeys = [];
     check from var row in resultStream
         do {
-            json rulesJson = check row.rules.fromJsonString();
-            string[] rulesArray = check rulesJson.cloneWithType();
             apiKeys.push({
                 id: row.id,
                 user_id: row.user_id,
                 name: row.name,
                 key_hash: row.key_hash,
                 description: row.description,
-                rules: rulesArray,
                 status: row.status,
                 usage_count: row.usage_count,
                 monthly_quota: row.monthly_quota,
@@ -163,7 +153,6 @@ public function validateApiKey(string apiKey) returns ApiKey|error {
         string name;
         string key_hash;
         string? description;
-        string rules;
         string status;
         int usage_count;
         int monthly_quota;
@@ -172,7 +161,7 @@ public function validateApiKey(string apiKey) returns ApiKey|error {
         string created_at;
         string updated_at;
     |}|sql:Error result = dbClient->queryRow(`
-        SELECT id, user_id, name, key_hash, description, rules, status, usage_count, monthly_quota, current_month_usage, quota_reset_date, created_at, updated_at
+        SELECT id, user_id, name, key_hash, description, status, usage_count, monthly_quota, current_month_usage, quota_reset_date, created_at, updated_at
         FROM api_keys WHERE key_hash = ${keyHash} AND status = 'active'
     `);
     
@@ -180,16 +169,12 @@ public function validateApiKey(string apiKey) returns ApiKey|error {
         return error("Invalid API key");
     }
     
-    json rulesJson = check result.rules.fromJsonString();
-    string[] rulesArray = check rulesJson.cloneWithType();
-    
     return {
         id: result.id,
         user_id: result.user_id,
         name: result.name,
         key_hash: result.key_hash,
         description: result.description,
-        rules: rulesArray,
         status: result.status,
         usage_count: result.usage_count,
         monthly_quota: result.monthly_quota,

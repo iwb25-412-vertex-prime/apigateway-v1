@@ -247,10 +247,8 @@ resource function post auth/login(@http:Payload json payload) returns http:Respo
             return res;
         }
         
-        string[] rules = payload.rules ?: [];
-        
         // Create API key
-        [ApiKey, string]|error result = createApiKey(userId, payload.name, payload.description, rules);
+        [ApiKey, string]|error result = createApiKey(userId, payload.name, payload.description);
         if result is error {
             if result.message().includes("Maximum of 3 API keys") {
                 res.statusCode = 400;
@@ -305,7 +303,10 @@ resource function post auth/login(@http:Payload json payload) returns http:Respo
         
         ApiKeyResponse[] responseKeys = [];
         foreach ApiKey key in apiKeys {
-            responseKeys.push(toApiKeyResponse(key));
+            // Get rules for this API key
+            Rule[]|error rules = getRulesByApiKeyId(key.id);
+            Rule[] keyRules = rules is error ? [] : rules;
+            responseKeys.push(toApiKeyResponse(key, keyRules));
         }
         
         res.setJsonPayload({
@@ -515,6 +516,279 @@ resource function post auth/login(@http:Payload json payload) returns http:Respo
             "quotaResetDate": updatedKey.quota_reset_date,
             "quotaAvailable": quotaAvailable,
             "status": updatedKey.status
+        });
+        return res;
+    }
+
+    // ===== RULE MANAGEMENT ENDPOINTS =====
+    
+    // Create a new rule for an API key
+    resource function post apikeys/[string keyId]/rules(http:Request req, @http:Payload CreateRuleRequest payload) returns http:Response {
+        http:Response res = new;
+        
+        // Validate JWT token and get user
+        json|error userPayload = validateTokenFromRequest(req);
+        if userPayload is error {
+            res.statusCode = 401;
+            res.setJsonPayload({"error": "Invalid or expired token"});
+            return res;
+        }
+        
+        string|error userIdResult = extractUserId(userPayload);
+        if userIdResult is error {
+            res.statusCode = 401;
+            res.setJsonPayload({"error": "Invalid token claims"});
+            return res;
+        }
+        string userId = userIdResult;
+        
+        // Verify API key ownership
+        ApiKey|error apiKey = getApiKeyById(keyId);
+        if apiKey is error {
+            res.statusCode = 404;
+            res.setJsonPayload({"error": "API key not found"});
+            return res;
+        }
+        
+        if apiKey.user_id != userId {
+            res.statusCode = 403;
+            res.setJsonPayload({"error": "Access denied"});
+            return res;
+        }
+        
+        // Validate input
+        if payload.name.length() < 1 || payload.name.length() > 100 {
+            res.statusCode = 400;
+            res.setJsonPayload({"error": "Rule name must be between 1 and 100 characters"});
+            return res;
+        }
+        
+        string[] validRuleTypes = ["rate_limit", "ip_whitelist", "endpoint_access", "time_restriction"];
+        if !validRuleTypes.some(function(string ruleType) returns boolean => ruleType == payload.rule_type) {
+            res.statusCode = 400;
+            res.setJsonPayload({"error": "Invalid rule type. Must be one of: " + string:'join(", ", ...validRuleTypes)});
+            return res;
+        }
+        
+        boolean isActive = payload.is_active ?: true;
+        
+        // Create rule
+        Rule|error result = createRule(keyId, payload.name, payload.description, payload.rule_type, payload.rule_config, isActive);
+        if result is error {
+            log:printError("Failed to create rule", result);
+            res.statusCode = 500;
+            res.setJsonPayload({"error": "Failed to create rule"});
+            return res;
+        }
+        
+        log:printInfo("Rule created successfully for API key: " + keyId);
+        res.statusCode = 201;
+        res.setJsonPayload({
+            "message": "Rule created successfully",
+            "rule": toRuleResponse(result)
+        });
+        return res;
+    }
+    
+    // Get all rules for an API key
+    resource function get apikeys/[string keyId]/rules(http:Request req) returns http:Response {
+        http:Response res = new;
+        
+        // Validate JWT token and get user
+        json|error userPayload = validateTokenFromRequest(req);
+        if userPayload is error {
+            res.statusCode = 401;
+            res.setJsonPayload({"error": "Invalid or expired token"});
+            return res;
+        }
+        
+        string|error userIdResult = extractUserId(userPayload);
+        if userIdResult is error {
+            res.statusCode = 401;
+            res.setJsonPayload({"error": "Invalid token claims"});
+            return res;
+        }
+        string userId = userIdResult;
+        
+        // Verify API key ownership
+        ApiKey|error apiKey = getApiKeyById(keyId);
+        if apiKey is error {
+            res.statusCode = 404;
+            res.setJsonPayload({"error": "API key not found"});
+            return res;
+        }
+        
+        if apiKey.user_id != userId {
+            res.statusCode = 403;
+            res.setJsonPayload({"error": "Access denied"});
+            return res;
+        }
+        
+        // Get rules
+        Rule[]|error rules = getRulesByApiKeyId(keyId);
+        if rules is error {
+            log:printError("Failed to get rules", rules);
+            res.statusCode = 500;
+            res.setJsonPayload({"error": "Failed to retrieve rules"});
+            return res;
+        }
+        
+        RuleResponse[] responseRules = [];
+        foreach Rule rule in rules {
+            responseRules.push(toRuleResponse(rule));
+        }
+        
+        res.setJsonPayload({
+            "rules": responseRules,
+            "count": responseRules.length(),
+            "apiKeyId": keyId
+        });
+        return res;
+    }
+    
+    // Update a rule
+    resource function put rules/[string ruleId](http:Request req, @http:Payload UpdateRuleRequest payload) returns http:Response {
+        http:Response res = new;
+        
+        // Validate JWT token and get user
+        json|error userPayload = validateTokenFromRequest(req);
+        if userPayload is error {
+            res.statusCode = 401;
+            res.setJsonPayload({"error": "Invalid or expired token"});
+            return res;
+        }
+        
+        string|error userIdResult = extractUserId(userPayload);
+        if userIdResult is error {
+            res.statusCode = 401;
+            res.setJsonPayload({"error": "Invalid token claims"});
+            return res;
+        }
+        string userId = userIdResult;
+        
+        // Verify rule ownership
+        boolean|error ownershipResult = validateRuleOwnership(ruleId, userId);
+        if ownershipResult is error || !ownershipResult {
+            res.statusCode = 403;
+            res.setJsonPayload({"error": "Access denied or rule not found"});
+            return res;
+        }
+        
+        // Validate input
+        if payload.name is string && (payload.name.length() < 1 || payload.name.length() > 100) {
+            res.statusCode = 400;
+            res.setJsonPayload({"error": "Rule name must be between 1 and 100 characters"});
+            return res;
+        }
+        
+        // Update rule
+        Rule|error result = updateRule(ruleId, payload.name, payload.description, payload.rule_config, payload.is_active);
+        if result is error {
+            log:printError("Failed to update rule", result);
+            res.statusCode = 500;
+            res.setJsonPayload({"error": "Failed to update rule"});
+            return res;
+        }
+        
+        res.setJsonPayload({
+            "message": "Rule updated successfully",
+            "rule": toRuleResponse(result)
+        });
+        return res;
+    }
+    
+    // Delete a rule
+    resource function delete rules/[string ruleId](http:Request req) returns http:Response {
+        http:Response res = new;
+        
+        // Validate JWT token and get user
+        json|error userPayload = validateTokenFromRequest(req);
+        if userPayload is error {
+            res.statusCode = 401;
+            res.setJsonPayload({"error": "Invalid or expired token"});
+            return res;
+        }
+        
+        string|error userIdResult = extractUserId(userPayload);
+        if userIdResult is error {
+            res.statusCode = 401;
+            res.setJsonPayload({"error": "Invalid token claims"});
+            return res;
+        }
+        string userId = userIdResult;
+        
+        // Get rule to verify ownership and get API key ID
+        Rule|error rule = getRuleById(ruleId);
+        if rule is error {
+            res.statusCode = 404;
+            res.setJsonPayload({"error": "Rule not found"});
+            return res;
+        }
+        
+        // Verify rule ownership
+        boolean|error ownershipResult = validateRuleOwnership(ruleId, userId);
+        if ownershipResult is error || !ownershipResult {
+            res.statusCode = 403;
+            res.setJsonPayload({"error": "Access denied"});
+            return res;
+        }
+        
+        // Delete rule
+        boolean|error deleteResult = deleteRule(ruleId, rule.api_key_id);
+        if deleteResult is error {
+            log:printError("Failed to delete rule", deleteResult);
+            res.statusCode = 500;
+            res.setJsonPayload({"error": "Failed to delete rule"});
+            return res;
+        }
+        
+        if !deleteResult {
+            res.statusCode = 404;
+            res.setJsonPayload({"error": "Rule not found"});
+            return res;
+        }
+        
+        res.setJsonPayload({"message": "Rule deleted successfully"});
+        return res;
+    }
+    
+    // Get all rules for a user (across all API keys)
+    resource function get rules(http:Request req) returns http:Response {
+        http:Response res = new;
+        
+        // Validate JWT token and get user
+        json|error userPayload = validateTokenFromRequest(req);
+        if userPayload is error {
+            res.statusCode = 401;
+            res.setJsonPayload({"error": "Invalid or expired token"});
+            return res;
+        }
+        
+        string|error userIdResult = extractUserId(userPayload);
+        if userIdResult is error {
+            res.statusCode = 401;
+            res.setJsonPayload({"error": "Invalid token claims"});
+            return res;
+        }
+        string userId = userIdResult;
+        
+        // Get all rules for user
+        Rule[]|error rules = getRulesByUserId(userId);
+        if rules is error {
+            log:printError("Failed to get rules", rules);
+            res.statusCode = 500;
+            res.setJsonPayload({"error": "Failed to retrieve rules"});
+            return res;
+        }
+        
+        RuleResponse[] responseRules = [];
+        foreach Rule rule in rules {
+            responseRules.push(toRuleResponse(rule));
+        }
+        
+        res.setJsonPayload({
+            "rules": responseRules,
+            "count": responseRules.length()
         });
         return res;
     }
