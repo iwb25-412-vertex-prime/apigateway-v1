@@ -22,6 +22,47 @@ A full-stack application with secure authentication using Ballerina backend, SQL
 └── README.md                  # This file
 ```
 
+## What's Implemented
+
+This project includes a complete authentication and API key management system with the following components:
+
+### ✅ Core Features Implemented
+
+- **User Registration & Login System** - Complete user account management
+- **JWT-like Token Authentication** - Secure token-based authentication
+- **Password Security** - SHA256 hashing with salt for password protection
+- **SQLite Database Integration** - Automatic database creation and management
+- **API Key Management System** - Create, manage, and validate API keys (max 3 per user)
+- **Token Revocation** - Secure logout with immediate token invalidation
+- **Database Tables Auto-Creation** - Three tables created automatically:
+  - `users` - User account information
+  - `jwt_tokens` - Token tracking and revocation
+  - `api_keys` - API key management with usage tracking
+
+### ✅ Security Features
+
+- **Secure Password Storage** - Never store plain text passwords
+- **Token Signing & Validation** - Cryptographic token security
+- **Database Token Tracking** - All tokens tracked for security auditing
+- **API Key Limits** - Maximum 3 API keys per user
+- **Input Validation** - Email format and password strength validation
+- **CORS Protection** - Configured for frontend integration
+
+### ✅ Frontend Components
+
+- **React Authentication UI** - Login, register, and profile components
+- **Auth Context Provider** - Global authentication state management
+- **TypeScript Support** - Full type safety throughout
+- **Tailwind CSS Styling** - Modern, responsive design
+- **Token Expiry Handling** - Automatic cleanup and re-authentication
+
+### ✅ Development Tools
+
+- **Startup Scripts** - Easy service startup for Windows and Unix
+- **Database Viewer Script** - Quick database inspection tools
+- **API Testing Scripts** - Automated testing for API key functionality
+- **Comprehensive Documentation** - Complete setup and usage guides
+
 ## How Authentication Works
 
 ### 🔐 Authentication Flow
@@ -110,6 +151,7 @@ Each API key contains:
 ### API Key Endpoints
 
 #### Create API Key
+
 ```bash
 POST /api/apikeys
 Authorization: Bearer <jwt_token>
@@ -123,12 +165,14 @@ Content-Type: application/json
 ```
 
 #### List User's API Keys
+
 ```bash
 GET /api/apikeys
 Authorization: Bearer <jwt_token>
 ```
 
 #### Update API Key Status
+
 ```bash
 PUT /api/apikeys/{keyId}/status
 Authorization: Bearer <jwt_token>
@@ -140,12 +184,14 @@ Content-Type: application/json
 ```
 
 #### Delete API Key
+
 ```bash
 DELETE /api/apikeys/{keyId}
 Authorization: Bearer <jwt_token>
 ```
 
 #### Validate API Key
+
 ```bash
 POST /api/apikeys/validate
 Content-Type: application/json
@@ -158,6 +204,7 @@ Content-Type: application/json
 ### Usage Examples
 
 1. **Create a development API key:**
+
    ```bash
    curl -X POST http://localhost:8080/api/apikeys \
      -H "Content-Type: application/json" \
@@ -170,12 +217,14 @@ Content-Type: application/json
    ```
 
 2. **List all your API keys:**
+
    ```bash
    curl -X GET http://localhost:8080/api/apikeys \
      -H "Authorization: Bearer YOUR_JWT_TOKEN"
    ```
 
 3. **Disable an API key:**
+
    ```bash
    curl -X PUT http://localhost:8080/api/apikeys/KEY_ID/status \
      -H "Content-Type: application/json" \
@@ -195,17 +244,20 @@ Content-Type: application/json
 Use the provided test scripts to test the API key functionality:
 
 **Windows:**
+
 ```bash
 test-apikeys.bat
 ```
 
 **Unix/Linux/macOS:**
+
 ```bash
 chmod +x test-apikeys.sh
 ./test-apikeys.sh
 ```
 
 These scripts will:
+
 1. Register a test user
 2. Login to get a JWT token
 3. Create 3 API keys (maximum allowed)
@@ -512,7 +564,37 @@ port = 8080
 
 ## 🔍 Viewing and Managing the Database
 
-The SQLite database is located at `ballerina-backend/database/userportal.db` and can be accessed through multiple methods:
+The SQLite database is located at `ballerina-backend/database/userportal.db` and contains three main tables that were automatically created when the backend started:
+
+### Database Tables Created
+
+The application automatically creates the following tables:
+
+1. **`users`** - Stores user account information
+2. **`jwt_tokens`** - Tracks issued JWT tokens for security
+3. **`api_keys`** - Manages user API keys for programmatic access
+
+### Quick Database Access
+
+**Windows (PowerShell):**
+
+```powershell
+.\view-database.bat
+```
+
+**Or directly with SQLite3:**
+
+```powershell
+sqlite3 "ballerina-backend\database\userportal.db" ".tables"
+```
+
+**View table contents:**
+
+```powershell
+sqlite3 "ballerina-backend\database\userportal.db" "SELECT * FROM users;"
+sqlite3 "ballerina-backend\database\userportal.db" "SELECT * FROM jwt_tokens;"
+sqlite3 "ballerina-backend\database\userportal.db" "SELECT * FROM api_keys;"
+```
 
 ### Method 1: SQLite Command Line Interface
 
