@@ -1,6 +1,6 @@
-# User Portal with Secure Authentication
+# User Portal with Secure Authentication & API Key Management
 
-A full-stack application with secure authentication using Ballerina backend, SQLite database, and Next.js frontend. Features password hashing, JWT-like tokens, database storage, and token revocation.
+A comprehensive full-stack application featuring secure user authentication and API key management system. Built with Ballerina backend, SQLite database, and Next.js frontend. Includes password hashing, JWT-like tokens, database storage, token revocation, and complete API key lifecycle management with quota tracking.
 
 ## Project Structure
 
@@ -24,37 +24,45 @@ A full-stack application with secure authentication using Ballerina backend, SQL
 
 ## What's Implemented
 
-This project includes a complete authentication and API key management system with the following components:
+This project includes a complete authentication and API key management system with comprehensive quota management and usage tracking:
 
 ### ✅ Core Features Implemented
 
-- **User Registration & Login System** - Complete user account management
-- **JWT-like Token Authentication** - Secure token-based authentication
+- **User Registration & Login System** - Complete user account management with validation
+- **JWT-like Token Authentication** - Secure token-based authentication with database tracking
 - **Password Security** - SHA256 hashing with salt for password protection
-- **SQLite Database Integration** - Automatic database creation and management
+- **SQLite Database Integration** - Automatic database creation and management with proper indexing
 - **API Key Management System** - Create, manage, and validate API keys (max 3 per user)
+- **Quota Management System** - Monthly usage limits (100 requests/month per key) with automatic reset
+- **Usage Tracking** - Real-time tracking of API key usage with detailed analytics
 - **Token Revocation** - Secure logout with immediate token invalidation
 - **Database Tables Auto-Creation** - Three tables created automatically:
-  - `users` - User account information
-  - `jwt_tokens` - Token tracking and revocation
-  - `api_keys` - API key management with usage tracking
+  - `users` - User account information with security features
+  - `jwt_tokens` - Token tracking and revocation for security
+  - `api_keys` - API key management with usage tracking and quota management
 
 ### ✅ Security Features
 
-- **Secure Password Storage** - Never store plain text passwords
-- **Token Signing & Validation** - Cryptographic token security
-- **Database Token Tracking** - All tokens tracked for security auditing
-- **API Key Limits** - Maximum 3 API keys per user
+- **Secure Password Storage** - Never store plain text passwords (SHA256 + salt)
+- **Token Signing & Validation** - Cryptographic token security with database verification
+- **Database Token Tracking** - All tokens tracked for security auditing and revocation
+- **API Key Security** - Keys hashed in database, never stored in plain text
+- **API Key Limits** - Maximum 3 API keys per user to prevent abuse
+- **Quota Enforcement** - Monthly usage limits prevent API abuse
 - **Input Validation** - Email format and password strength validation
 - **CORS Protection** - Configured for frontend integration
+- **Secure Key Generation** - Cryptographically secure API key generation
 
 ### ✅ Frontend Components
 
 - **React Authentication UI** - Login, register, and profile components
+- **API Key Management UI** - Complete interface for creating and managing API keys
+- **Quota Monitoring Dashboard** - Real-time usage tracking and quota warnings
 - **Auth Context Provider** - Global authentication state management
 - **TypeScript Support** - Full type safety throughout
-- **Tailwind CSS Styling** - Modern, responsive design
+- **Tailwind CSS Styling** - Modern, responsive design with professional UI
 - **Token Expiry Handling** - Automatic cleanup and re-authentication
+- **Real-time Updates** - Live quota updates and usage statistics
 
 ### ✅ Development Tools
 
@@ -116,19 +124,21 @@ The application implements a secure JWT-like authentication system with database
 - **Input Validation**: Email format and password strength validation
 - **CORS Protection**: Configured for specific origins only
 
-## � APIa Key Management System
+## 🔑 API Key Management System
 
-The application includes a comprehensive API key management system that allows users to create, manage, and use API keys for programmatic access.
+The application includes a comprehensive API key management system with quota tracking and usage monitoring that allows users to create, manage, and use API keys for programmatic access.
 
 ### Key Features
 
-- **Limited Keys**: Each user can create up to 3 API keys maximum
+- **Limited Keys**: Each user can create up to 3 API keys maximum to prevent abuse
 - **Named Keys**: Each API key has a descriptive name for easy identification
-- **Usage Tracking**: Track how many times each API key has been used
+- **Usage Tracking**: Track how many times each API key has been used (lifetime + monthly)
+- **Quota Management**: Monthly usage limits (100 requests/month per key) with automatic reset
 - **Rules System**: Define custom rules/permissions for each API key
 - **Status Management**: Enable/disable API keys without deletion
 - **Secure Generation**: Cryptographically secure API key generation with `ak_` prefix
 - **Revocation**: Permanently revoke API keys when no longer needed
+- **Real-time Monitoring**: Live usage statistics and quota warnings
 
 ### API Key Structure
 
@@ -138,14 +148,18 @@ Example: `ak_a1b2c3d4e5f6789012345678901234567890abcd`
 
 ### API Key Properties
 
-Each API key contains:
+Each API key contains comprehensive tracking information:
 
-- **ID**: Unique identifier for the key
+- **ID**: Unique identifier for the key (UUID)
 - **Name**: User-defined descriptive name (1-100 characters)
 - **Description**: Optional detailed description
 - **Rules**: Array of permission strings (e.g., ["read", "write", "analytics"])
 - **Status**: "active", "inactive", or "revoked"
-- **Usage Count**: Number of times the key has been used
+- **Usage Count**: Total number of times the key has been used (lifetime)
+- **Monthly Quota**: Maximum requests allowed per month (default: 100)
+- **Current Month Usage**: Number of requests used in current month
+- **Remaining Quota**: Calculated remaining requests for current month
+- **Quota Reset Date**: When the monthly quota will reset (first day of next month)
 - **Created/Updated**: Timestamps for audit trail
 
 ### API Key Endpoints
@@ -190,7 +204,7 @@ DELETE /api/apikeys/{keyId}
 Authorization: Bearer <jwt_token>
 ```
 
-#### Validate API Key
+#### Validate API Key (with Usage Increment)
 
 ```bash
 POST /api/apikeys/validate
@@ -199,6 +213,48 @@ Content-Type: application/json
 {
   "apiKey": "ak_your_api_key_here"
 }
+```
+
+**Response (Success):**
+
+```json
+{
+  "valid": true,
+  "apiKey": {
+    "id": "key-uuid",
+    "name": "Development Key",
+    "status": "active",
+    "usage_count": 45,
+    "monthly_quota": 100,
+    "current_month_usage": 23,
+    "remaining_quota": 77,
+    "quota_reset_date": "2025-09-01"
+  },
+  "message": "API key is valid"
+}
+```
+
+**Response (Quota Exceeded):**
+
+```json
+{
+  "error": "Monthly quota exceeded",
+  "message": "You have exceeded your monthly quota of 100 requests. Quota resets on: 2025-09-01",
+  "apiKey": {
+    "id": "key-uuid",
+    "name": "Development Key",
+    "current_month_usage": 100,
+    "monthly_quota": 100,
+    "remaining_quota": 0
+  }
+}
+```
+
+#### Check Quota Status (without Usage Increment)
+
+```bash
+GET /api/apikeys/{keyId}/quota
+Authorization: Bearer <jwt_token>
 ```
 
 ### Usage Examples
@@ -319,7 +375,7 @@ CREATE TABLE jwt_tokens (
 
 #### API Keys Table
 
-Manages user API keys for programmatic access:
+Manages user API keys for programmatic access with comprehensive quota management:
 
 ```sql
 CREATE TABLE api_keys (
@@ -330,7 +386,10 @@ CREATE TABLE api_keys (
     description TEXT,                 -- Optional description
     rules TEXT,                       -- JSON array of permission rules
     status TEXT DEFAULT 'active',     -- Status: active, inactive, revoked
-    usage_count INTEGER DEFAULT 0,    -- Number of times key has been used
+    usage_count INTEGER DEFAULT 0,    -- Total number of times key has been used
+    monthly_quota INTEGER DEFAULT 100, -- Monthly request limit
+    current_month_usage INTEGER DEFAULT 0, -- Usage in current month
+    quota_reset_date TEXT,            -- When monthly quota resets (YYYY-MM-DD format)
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,  -- Key creation time
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,  -- Last modification time
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -342,7 +401,9 @@ CREATE TABLE api_keys (
 - Foreign key relationship ensures data integrity
 - API key hash stored (not plain key) for security
 - JSON rules array for flexible permission system
-- Usage tracking for monitoring and analytics
+- Comprehensive usage tracking (lifetime + monthly)
+- Monthly quota system with automatic reset functionality
+- Quota reset date tracking for precise quota management
 - Status management for key lifecycle
 - Cascade delete removes keys when user is deleted
 
@@ -353,13 +414,276 @@ Automatic indexes are created for optimal query performance:
 ```sql
 -- Automatic indexes on PRIMARY KEY and UNIQUE constraints
 -- Additional indexes for common queries:
+CREATE INDEX idx_users_username ON users(username);
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_active ON users(is_active);
 CREATE INDEX idx_jwt_tokens_user_id ON jwt_tokens(user_id);
+CREATE INDEX idx_jwt_tokens_token_hash ON jwt_tokens(token_hash);
 CREATE INDEX idx_jwt_tokens_expires_at ON jwt_tokens(expires_at);
-CREATE INDEX idx_jwt_tokens_is_revoked ON jwt_tokens(is_revoked);
 CREATE INDEX idx_api_keys_user_id ON api_keys(user_id);
-CREATE INDEX idx_api_keys_status ON api_keys(status);
 CREATE INDEX idx_api_keys_key_hash ON api_keys(key_hash);
+CREATE INDEX idx_api_keys_status ON api_keys(status);
 ```
+
+## 📊 Quota Management System
+
+The application implements a sophisticated quota management system that tracks API key usage and enforces monthly limits.
+
+### How Quota Management Works
+
+#### 1. **Monthly Quota Allocation**
+
+- Each API key gets 100 free requests per month by default
+- Quota resets automatically on the first day of each month
+- Users can have up to 3 API keys (300 total monthly requests)
+
+#### 2. **Usage Tracking**
+
+- **Total Usage Count**: Lifetime usage across all time
+- **Monthly Usage**: Requests used in current month
+- **Remaining Quota**: Calculated as `monthly_quota - current_month_usage`
+
+#### 3. **Quota Reset Logic**
+
+- Quota resets automatically when current date passes the `quota_reset_date`
+- Reset happens during API key validation or quota check
+- New reset date is calculated as first day of next month
+- Monthly usage counter resets to 0
+
+#### 4. **Quota Enforcement**
+
+- API key validation checks quota before allowing requests
+- Returns HTTP 429 (Too Many Requests) when quota exceeded
+- Provides clear error message with reset date
+- Usage is incremented only after successful validation
+
+### Quota Management Endpoints
+
+#### Check Quota Status
+
+```bash
+GET /api/apikeys/{keyId}/quota
+Authorization: Bearer <jwt_token>
+```
+
+**Response:**
+
+```json
+{
+  "keyId": "key-uuid",
+  "monthlyQuota": 100,
+  "currentMonthUsage": 45,
+  "remainingQuota": 55,
+  "quotaResetDate": "2025-09-01",
+  "quotaAvailable": true,
+  "status": "active"
+}
+```
+
+#### Validate API Key (Increments Usage)
+
+```bash
+POST /api/apikeys/validate
+Content-Type: application/json
+
+{
+  "apiKey": "ak_your_api_key_here"
+}
+```
+
+### Quota Reset Process
+
+The quota reset happens automatically and follows this process:
+
+1. **Check Reset Date**: Compare current date with `quota_reset_date`
+2. **Reset if Needed**: If current date >= reset date:
+   - Set `current_month_usage = 0`
+   - Calculate new `quota_reset_date` (first day of next month)
+   - Update database record
+3. **Continue Validation**: Proceed with normal quota checking
+
+### Frontend Quota Monitoring
+
+The frontend provides comprehensive quota monitoring:
+
+#### Dashboard Statistics
+
+- **Active Keys**: Number of non-revoked API keys
+- **Enabled Keys**: Number of active (not inactive) keys
+- **Total Usage**: Lifetime usage across all keys
+- **This Month**: Current month usage across all keys
+
+#### Quota Warnings
+
+- **Low Quota Warning**: When remaining quota ≤ 10 requests
+- **Quota Exceeded**: When monthly quota is fully used
+- **Visual Indicators**: Color-coded status indicators
+
+#### Real-time Updates
+
+- Quota information updates after each API call
+- Live remaining quota calculations
+- Automatic refresh of usage statistics
+
+### Quota Management Best Practices
+
+#### For Users
+
+1. **Monitor Usage**: Check quota status regularly
+2. **Plan Requests**: Distribute API calls throughout the month
+3. **Multiple Keys**: Use multiple API keys for different applications
+4. **Status Management**: Disable unused keys to prevent accidental usage
+
+#### For Developers
+
+1. **Handle 429 Errors**: Implement proper error handling for quota exceeded
+2. **Cache Responses**: Cache API responses to reduce quota usage
+3. **Batch Requests**: Combine multiple operations when possible
+4. **Monitor Quotas**: Check quota status before making requests
+
+### Example Quota Scenarios
+
+#### Scenario 1: Normal Usage
+
+```json
+{
+  "monthlyQuota": 100,
+  "currentMonthUsage": 45,
+  "remainingQuota": 55,
+  "quotaAvailable": true
+}
+```
+
+#### Scenario 2: Low Quota Warning
+
+```json
+{
+  "monthlyQuota": 100,
+  "currentMonthUsage": 92,
+  "remainingQuota": 8,
+  "quotaAvailable": true
+}
+```
+
+#### Scenario 3: Quota Exceeded
+
+```json
+{
+  "monthlyQuota": 100,
+  "currentMonthUsage": 100,
+  "remainingQuota": 0,
+  "quotaAvailable": false
+}
+```
+
+#### Scenario 4: After Quota Reset
+
+```json
+{
+  "monthlyQuota": 100,
+  "currentMonthUsage": 0,
+  "remainingQuota": 100,
+  "quotaResetDate": "2025-10-01",
+  "quotaAvailable": true
+}
+```
+
+## � API Kney Creation Flow
+
+Understanding how API keys are created and managed in the system:
+
+### Step-by-Step API Key Creation
+
+#### 1. **User Authentication**
+
+- User must be logged in with valid JWT token
+- Token is validated against database for revocation status
+- User ID is extracted from token for ownership
+
+#### 2. **Validation Checks**
+
+- **Key Limit Check**: Verify user has < 3 active API keys
+- **Input Validation**: Validate name (required), description (optional), rules (array)
+- **Authorization**: Ensure user can create keys
+
+#### 3. **Key Generation Process**
+
+```ballerina
+// Generate secure API key
+string apiKey = generateApiKey(); // Returns: ak_[32-char-hash]
+string keyHash = hashApiKey(apiKey); // SHA256 hash for storage
+string apiKeyId = generateUserId(); // UUID for database
+```
+
+#### 4. **Quota Setup**
+
+```ballerina
+// Calculate next month's first day for quota reset
+time:Utc currentTime = time:utcNow();
+time:Civil currentCivil = time:utcToCivil(currentTime);
+int nextYear = currentCivil.month == 12 ? currentCivil.year + 1 : currentCivil.year;
+int nextMonth = currentCivil.month == 12 ? 1 : currentCivil.month + 1;
+string quotaResetDate = string `${nextYear}-${nextMonth < 10 ? "0" : ""}${nextMonth}-01`;
+```
+
+#### 5. **Database Storage**
+
+```sql
+INSERT INTO api_keys (
+    id, user_id, name, key_hash, description, rules,
+    status, usage_count, monthly_quota, current_month_usage, quota_reset_date
+) VALUES (
+    ${apiKeyId}, ${userId}, ${name}, ${keyHash}, ${description}, ${rulesJson},
+    'active', 0, 100, 0, ${quotaResetDate}
+);
+```
+
+#### 6. **Response Generation**
+
+- Return the plain API key (only time it's shown)
+- Return key metadata for display
+- Key is never stored in plain text again
+
+### API Key Security Model
+
+#### Storage Security
+
+- **Plain Key**: Only returned once during creation
+- **Hashed Key**: SHA256 hash stored in database
+- **Validation**: Hash comparison for authentication
+- **No Recovery**: Lost keys cannot be recovered, only regenerated
+
+#### Access Control
+
+- **User Ownership**: Keys tied to specific user accounts
+- **Token Authentication**: All key operations require valid JWT
+- **Status Management**: Keys can be disabled without deletion
+- **Revocation**: Permanent key invalidation
+
+### Frontend API Key Management
+
+#### Creation Modal
+
+```typescript
+interface CreateApiKeyRequest {
+  name: string; // Required: 1-100 characters
+  description?: string; // Optional: Detailed description
+  rules: string[]; // Required: Permission array
+}
+```
+
+#### Key Display
+
+- **Masked Keys**: Only show last 4 characters after creation
+- **Usage Statistics**: Real-time quota and usage display
+- **Status Indicators**: Visual status (active/inactive/revoked)
+- **Action Buttons**: Enable/disable, delete functionality
+
+#### Real-time Updates
+
+- **Live Quota**: Updates after each validation
+- **Usage Tracking**: Increments with each successful API call
+- **Status Changes**: Immediate UI updates on status changes
 
 ### 🔍 Token Structure
 
@@ -450,24 +774,130 @@ start-services.bat
    - Backend API: http://localhost:8080
    - Auth page: http://localhost:3000/auth
 
-## API Endpoints
+## 🌐 API Endpoints Reference
 
-### Public Endpoints
+### Public Endpoints (No Authentication Required)
 
-- `GET /api/health` - Health check
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/login` - User login
-- `POST /api/auth/logout` - User logout
-- `POST /api/apikeys/validate` - Validate API key
+#### Health Check
+
+- **GET** `/api/health`
+- **Description**: Service health status
+- **Response**: `{"status": "healthy", "service": "userportal-auth", "timestamp": "..."}`
+
+#### User Registration
+
+- **POST** `/api/auth/register`
+- **Body**: `{"username": "string", "email": "string", "password": "string"}`
+- **Validation**: Username 3-50 chars, valid email, password 8+ chars
+- **Response**: User object (password excluded)
+
+#### User Login
+
+- **POST** `/api/auth/login`
+- **Body**: `{"username": "string", "password": "string"}`
+- **Response**: JWT token + user info + expiry time
+
+#### User Logout
+
+- **POST** `/api/auth/logout`
+- **Headers**: `Authorization: Bearer <token>` (optional)
+- **Description**: Revokes token if provided
+
+#### Validate API Key
+
+- **POST** `/api/apikeys/validate`
+- **Body**: `{"apiKey": "ak_..."}`
+- **Description**: Validates key and increments usage counter
+- **Response**: Key validity + usage info OR quota exceeded error
 
 ### Protected Endpoints (Require JWT Token)
 
-- `GET /api/auth/profile` - Get user profile
-- `PUT /api/auth/profile` - Update user profile
-- `POST /api/apikeys` - Create new API key
-- `GET /api/apikeys` - List user's API keys
-- `PUT /api/apikeys/{keyId}/status` - Update API key status
-- `DELETE /api/apikeys/{keyId}` - Delete (revoke) API key
+#### Get User Profile
+
+- **GET** `/api/auth/profile`
+- **Headers**: `Authorization: Bearer <token>`
+- **Response**: Current user information
+
+#### Create API Key
+
+- **POST** `/api/apikeys`
+- **Headers**: `Authorization: Bearer <token>`
+- **Body**: `{"name": "string", "description": "string?", "rules": ["string"]}`
+- **Limits**: Max 3 keys per user
+- **Response**: Created key object + plain API key (shown once)
+
+#### List User's API Keys
+
+- **GET** `/api/apikeys`
+- **Headers**: `Authorization: Bearer <token>`
+- **Response**: Array of user's API keys with usage statistics
+
+#### Update API Key Status
+
+- **PUT** `/api/apikeys/{keyId}/status`
+- **Headers**: `Authorization: Bearer <token>`
+- **Body**: `{"status": "active" | "inactive"}`
+- **Description**: Enable/disable key without deletion
+
+#### Delete API Key
+
+- **DELETE** `/api/apikeys/{keyId}`
+- **Headers**: `Authorization: Bearer <token>`
+- **Description**: Permanently revoke API key
+
+#### Check Quota Status
+
+- **GET** `/api/apikeys/{keyId}/quota`
+- **Headers**: `Authorization: Bearer <token>`
+- **Response**: Detailed quota information without incrementing usage
+
+### Response Status Codes
+
+#### Success Codes
+
+- **200 OK**: Successful request
+- **201 Created**: Resource created successfully
+
+#### Client Error Codes
+
+- **400 Bad Request**: Invalid input data
+- **401 Unauthorized**: Missing or invalid authentication
+- **403 Forbidden**: Access denied (wrong user)
+- **404 Not Found**: Resource not found
+- **409 Conflict**: Resource already exists (username/email)
+- **429 Too Many Requests**: Quota exceeded
+
+#### Server Error Codes
+
+- **500 Internal Server Error**: Server-side error
+
+### Error Response Format
+
+All errors follow consistent format:
+
+```json
+{
+  "error": "Error message description"
+}
+```
+
+### Authentication Header Format
+
+Protected endpoints require JWT token:
+
+```
+Authorization: Bearer <jwt_token>
+```
+
+### API Key Format
+
+API keys follow the pattern:
+
+```
+ak_[32-character-hexadecimal-hash]
+```
+
+Example: `ak_a1b2c3d4e5f6789012345678901234567890abcd`
 
 ## Usage Examples
 
