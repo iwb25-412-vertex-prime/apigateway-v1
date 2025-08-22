@@ -46,7 +46,7 @@ public function initializeDatabase() returns error? {
         )
     `);
     
-    // Create api_keys table
+    // Create api_keys table (without rules column)
     _ = check dbClient->execute(`
         CREATE TABLE IF NOT EXISTS api_keys (
             id TEXT PRIMARY KEY,
@@ -54,7 +54,6 @@ public function initializeDatabase() returns error? {
             name TEXT NOT NULL,
             key_hash TEXT NOT NULL,
             description TEXT,
-            rules TEXT, -- JSON array stored as string
             status TEXT DEFAULT 'active',
             usage_count INTEGER DEFAULT 0,
             monthly_quota INTEGER DEFAULT 100,
@@ -63,6 +62,22 @@ public function initializeDatabase() returns error? {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    `);
+    
+    // Create rules table
+    _ = check dbClient->execute(`
+        CREATE TABLE IF NOT EXISTS rules (
+            id TEXT PRIMARY KEY,
+            api_key_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            description TEXT,
+            rule_type TEXT NOT NULL, -- 'rate_limit', 'ip_whitelist', 'endpoint_access', 'time_restriction'
+            rule_config TEXT NOT NULL, -- JSON configuration for the rule
+            is_active BOOLEAN DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (api_key_id) REFERENCES api_keys(id) ON DELETE CASCADE
         )
     `);
     
@@ -82,6 +97,12 @@ public function initializeDatabase() returns error? {
     `);
     // Ignore error if column already exists
     
+    // Remove rules column from existing api_keys table if it exists
+    sql:ExecutionResult|sql:Error dropRulesColumn = dbClient->execute(`
+        ALTER TABLE api_keys DROP COLUMN rules
+    `);
+    // Ignore error if column doesn't exist
+    
     // Create indexes for better performance
     _ = check dbClient->execute(`CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)`);
     _ = check dbClient->execute(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`);
@@ -92,6 +113,9 @@ public function initializeDatabase() returns error? {
     _ = check dbClient->execute(`CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(user_id)`);
     _ = check dbClient->execute(`CREATE INDEX IF NOT EXISTS idx_api_keys_key_hash ON api_keys(key_hash)`);
     _ = check dbClient->execute(`CREATE INDEX IF NOT EXISTS idx_api_keys_status ON api_keys(status)`);
+    _ = check dbClient->execute(`CREATE INDEX IF NOT EXISTS idx_rules_api_key_id ON rules(api_key_id)`);
+    _ = check dbClient->execute(`CREATE INDEX IF NOT EXISTS idx_rules_rule_type ON rules(rule_type)`);
+    _ = check dbClient->execute(`CREATE INDEX IF NOT EXISTS idx_rules_is_active ON rules(is_active)`);
     
     log:printInfo("Database schema initialized successfully!");
 }
