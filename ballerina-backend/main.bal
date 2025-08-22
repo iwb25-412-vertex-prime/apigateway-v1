@@ -206,6 +206,22 @@ function initializeDatabase(jdbc:Client dbClient) returns error? {
         )
     `);
     
+    // Migrate existing api_keys table to add quota columns if they don't exist
+    sql:ExecutionResult|sql:Error result1 = dbClient->execute(`
+        ALTER TABLE api_keys ADD COLUMN monthly_quota INTEGER DEFAULT 100
+    `);
+    // Ignore error if column already exists
+    
+    sql:ExecutionResult|sql:Error result2 = dbClient->execute(`
+        ALTER TABLE api_keys ADD COLUMN current_month_usage INTEGER DEFAULT 0
+    `);
+    // Ignore error if column already exists
+    
+    sql:ExecutionResult|sql:Error result3 = dbClient->execute(`
+        ALTER TABLE api_keys ADD COLUMN quota_reset_date TEXT DEFAULT (date('now', 'start of month', '+1 month'))
+    `);
+    // Ignore error if column already exists
+    
     log:printInfo("Database schema initialized successfully!");
 }
 
@@ -615,7 +631,7 @@ function deleteApiKey(string keyId, string userId) returns boolean|error {
 
 @http:ServiceConfig {
     cors: {
-        allowOrigins: ["http://localhost:3000"],
+        allowOrigins: ["http://localhost:3000", "http://localhost:3001"],
         allowCredentials: true,
         allowHeaders: ["Authorization", "Content-Type"],
         allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
