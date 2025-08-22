@@ -83,7 +83,7 @@ export function ApiKeyManagement() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">API Key Management</h1>
             <p className="text-gray-600 mt-2">
-              Create and manage your API keys for programmatic access. Maximum 3 active keys allowed.
+              Create and manage API keys for your content policy enforcement platform. Maximum 3 active keys allowed.
             </p>
           </div>
           <button

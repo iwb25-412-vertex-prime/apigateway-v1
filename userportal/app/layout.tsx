@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "User Portal - Secure Authentication & API Management",
-  description: "A secure user portal with JWT authentication and API key management",
+  title: "Content Policy Platform - API Management Portal",
+  description: "A SaaS platform that enables developers to define and enforce custom content policies via API",
 };
 
 export default function RootLayout({

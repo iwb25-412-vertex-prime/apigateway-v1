@@ -29,10 +29,10 @@ export default function Home() {
         <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h1 className="text-4xl font-bold text-gray-900 mb-4">
-              Welcome to User Portal
+              Welcome to ContentGuard API
             </h1>
             <p className="text-xl text-gray-600 mb-8">
-              A secure authentication system with API key management
+              A SaaS platform that enables developers to define and enforce custom content policies via API
             </p>
             
             <div className="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto mb-12">
@@ -52,8 +52,8 @@ export default function Home() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">API Key Management</h3>
-                <p className="text-gray-600">Create and manage up to 3 API keys with custom permissions</p>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Content Policy API</h3>
+                <p className="text-gray-600">Create and manage up to 3 API keys with custom content policy rules</p>
               </div>
             </div>
 
@@ -106,7 +106,7 @@ export default function Home() {
                   </div>
                   <div>
                     <h3 className="font-medium text-gray-900">Manage API Keys</h3>
-                    <p className="text-sm text-gray-600">Create and manage your API keys</p>
+                    <p className="text-sm text-gray-600">Create and manage your content policy API keys</p>
                   </div>
                 </div>
               </Link>
