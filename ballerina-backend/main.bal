@@ -367,23 +367,14 @@ function createApiKey(string userId, string name, string? description, string[] 
     string keyHash = hashApiKey(apiKey);
     string rulesJson = rules.toJsonString();
     
-    // Calculate next month's first day for quota reset
+    // Calculate next month's first day for quota reset (simplified approach)
     time:Utc currentTime = time:utcNow();
     time:Civil currentCivil = time:utcToCivil(currentTime);
-    time:Civil nextMonth = {
-        year: currentCivil.month == 12 ? currentCivil.year + 1 : currentCivil.year,
-        month: currentCivil.month == 12 ? 1 : currentCivil.month + 1,
-        day: 1,
-        hour: 0,
-        minute: 0,
-        second: 0
-    };
-    time:Utc|time:Error quotaResetResult = time:utcFromCivil(nextMonth);
-    if quotaResetResult is time:Error {
-        return error("Failed to calculate quota reset date");
-    }
-    time:Utc quotaResetUtc = quotaResetResult;
-    string quotaResetDate = time:utcToString(quotaResetUtc);
+    
+    // Simple string-based date calculation for next month
+    int nextYear = currentCivil.month == 12 ? currentCivil.year + 1 : currentCivil.year;
+    int nextMonth = currentCivil.month == 12 ? 1 : currentCivil.month + 1;
+    string quotaResetDate = string `${nextYear}-${nextMonth < 10 ? "0" : ""}${nextMonth}-01`;
     
     sql:ExecutionResult result = check dbClient->execute(`
         INSERT INTO api_keys (id, user_id, name, key_hash, description, rules, status, usage_count, monthly_quota, current_month_usage, quota_reset_date)
@@ -580,23 +571,14 @@ function checkQuotaLimit(ApiKey apiKey) returns boolean {
 }
 
 function resetMonthlyQuota(string keyId) returns error? {
-    // Calculate next month's first day for new quota reset
+    // Calculate next month's first day for new quota reset (simplified approach)
     time:Utc currentTime = time:utcNow();
     time:Civil currentCivil = time:utcToCivil(currentTime);
-    time:Civil nextMonth = {
-        year: currentCivil.month == 12 ? currentCivil.year + 1 : currentCivil.year,
-        month: currentCivil.month == 12 ? 1 : currentCivil.month + 1,
-        day: 1,
-        hour: 0,
-        minute: 0,
-        second: 0
-    };
-    time:Utc|time:Error quotaResetResult2 = time:utcFromCivil(nextMonth);
-    if quotaResetResult2 is time:Error {
-        return error("Failed to calculate quota reset date");
-    }
-    time:Utc quotaResetUtc = quotaResetResult2;
-    string quotaResetDate = time:utcToString(quotaResetUtc);
+    
+    // Simple string-based date calculation for next month
+    int nextYear = currentCivil.month == 12 ? currentCivil.year + 1 : currentCivil.year;
+    int nextMonth = currentCivil.month == 12 ? 1 : currentCivil.month + 1;
+    string quotaResetDate = string `${nextYear}-${nextMonth < 10 ? "0" : ""}${nextMonth}-01`;
     
     _ = check dbClient->execute(`
         UPDATE api_keys 
