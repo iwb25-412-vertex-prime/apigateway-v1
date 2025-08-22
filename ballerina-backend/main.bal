@@ -1,615 +1,8 @@
+// Main service file - clean and organized
 import ballerina/http;
-import ballerina/sql;
-import ballerinax/java.jdbc;
-import ballerina/crypto;
-import ballerina/uuid;
 import ballerina/time;
 import ballerina/log;
-import ballerina/regex;
-
-// Configuration
-configurable string jwtSecret = "your-super-secret-jwt-key-change-in-production-min-32-chars";
-configurable int jwtExpiryTime = 3600;
-configurable string jwtIssuer = "userportal-auth";
-configurable string jwtAudience = "userportal-users";
-configurable string dbPath = "database/userportal.db";
-
-// Database connection - SQLite
-jdbc:Client dbClient = check new (
-    url = "jdbc:sqlite:" + dbPath,
-    options = {
-        properties: {"foreign_keys": "ON"}
-    }
-);
-
-// User model
-type User record {|
-    string id;
-    string username;
-    string email;
-    string password_hash;
-    string created_at;
-    string updated_at;
-    boolean is_active;
-|};
-
-type UserResponse record {|
-    string id;
-    string username;
-    string email;
-    string created_at;
-    string updated_at;
-    boolean is_active;
-|};
-
-// API Key model
-type ApiKey record {|
-    string id;
-    string user_id;
-    string name;
-    string key_hash;
-    string description?;
-    string[] rules;
-    string status; // "active", "inactive", "revoked"
-    int usage_count;
-    int monthly_quota; // Monthly request limit (default 100)
-    int current_month_usage; // Usage in current month
-    string quota_reset_date; // When the monthly quota resets
-    string created_at;
-    string updated_at;
-|};
-
-type ApiKeyResponse record {|
-    string id;
-    string name;
-    string description?;
-    string[] rules;
-    string status;
-    int usage_count;
-    int monthly_quota;
-    int current_month_usage;
-    int remaining_quota;
-    string quota_reset_date;
-    string created_at;
-    string updated_at;
-|};
-
-type CreateApiKeyRequest record {|
-    string name;
-    string description?;
-    string[] rules?;
-|};
-
-// Simple password hashing (for demo purposes)
-function hashPassword(string password) returns string {
-    return crypto:hashSha256((password + "salt123").toBytes()).toBase16();
-}
-
-function checkPassword(string password, string hash) returns boolean {
-    string hashedInput = crypto:hashSha256((password + "salt123").toBytes()).toBase16();
-    return hashedInput == hash;
-}
-
-// Simple secure token generation (using direct string concatenation for demo)
-function generateToken(User user) returns string {
-    int currentTime = <int>time:utcNow()[0];
-    int expiryTime = currentTime + jwtExpiryTime;
-    
-    // Create a simple token with user info and expiry
-    string tokenData = string `${user.id}|${user.username}|${user.email}|${expiryTime}`;
-    string signature = crypto:hashSha256((tokenData + jwtSecret).toBytes()).toBase16();
-    
-    return string `${tokenData}|${signature}`;
-}
-
-function validateToken(string token) returns json|error {
-    string[] parts = regex:split(token, "\\|");
-    if parts.length() != 5 {
-        return error("Invalid token format");
-    }
-    
-    string userId = parts[0];
-    string username = parts[1];
-    string email = parts[2];
-    string expStr = parts[3];
-    string providedSignature = parts[4];
-    
-    // Reconstruct token data for signature verification
-    string tokenData = string `${userId}|${username}|${email}|${expStr}`;
-    string expectedSignature = crypto:hashSha256((tokenData + jwtSecret).toBytes()).toBase16();
-    
-    if expectedSignature != providedSignature {
-        return error("Invalid token signature");
-    }
-    
-    // Check expiry
-    int exp = check int:fromString(expStr);
-    int currentTime = <int>time:utcNow()[0];
-    if exp < currentTime {
-        return error("Token expired");
-    }
-    
-    // Return as JSON
-    json payload = {
-        "userId": userId,
-        "username": username,
-        "email": email,
-        "exp": exp,
-        "iss": jwtIssuer,
-        "aud": jwtAudience
-    };
-    
-    return payload;
-}
-
-// Utility functions
-function generateUserId() returns string {
-    return uuid:createType1AsString();
-}
-
-function isValidEmail(string email) returns boolean {
-    string emailPattern = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$";
-    return regex:matches(email, emailPattern);
-}
-
-function isValidPassword(string password) returns boolean {
-    return password.length() >= 8;
-}
-
-// Initialize database with schema
-function initializeDatabase(jdbc:Client dbClient) returns error? {
-    log:printInfo("Initializing database schema...");
-    
-    // Create users table
-    _ = check dbClient->execute(`
-        CREATE TABLE IF NOT EXISTS users (
-            id TEXT PRIMARY KEY,
-            username TEXT UNIQUE NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            is_active BOOLEAN DEFAULT 1
-        )
-    `);
-    
-    // Create jwt_tokens table
-    _ = check dbClient->execute(`
-        CREATE TABLE IF NOT EXISTS jwt_tokens (
-            id TEXT PRIMARY KEY,
-            user_id TEXT NOT NULL,
-            token_hash TEXT NOT NULL,
-            expires_at DATETIME NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            is_revoked BOOLEAN DEFAULT 0,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-        )
-    `);
-    
-    // Create api_keys table
-    _ = check dbClient->execute(`
-        CREATE TABLE IF NOT EXISTS api_keys (
-            id TEXT PRIMARY KEY,
-            user_id TEXT NOT NULL,
-            name TEXT NOT NULL,
-            key_hash TEXT NOT NULL,
-            description TEXT,
-            rules TEXT, -- JSON array stored as string
-            status TEXT DEFAULT 'active',
-            usage_count INTEGER DEFAULT 0,
-            monthly_quota INTEGER DEFAULT 100,
-            current_month_usage INTEGER DEFAULT 0,
-            quota_reset_date TEXT DEFAULT (date('now', 'start of month', '+1 month')),
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-        )
-    `);
-    
-    // Migrate existing api_keys table to add quota columns if they don't exist
-    sql:ExecutionResult|sql:Error result1 = dbClient->execute(`
-        ALTER TABLE api_keys ADD COLUMN monthly_quota INTEGER DEFAULT 100
-    `);
-    // Ignore error if column already exists
-    
-    sql:ExecutionResult|sql:Error result2 = dbClient->execute(`
-        ALTER TABLE api_keys ADD COLUMN current_month_usage INTEGER DEFAULT 0
-    `);
-    // Ignore error if column already exists
-    
-    sql:ExecutionResult|sql:Error result3 = dbClient->execute(`
-        ALTER TABLE api_keys ADD COLUMN quota_reset_date TEXT DEFAULT (date('now', 'start of month', '+1 month'))
-    `);
-    // Ignore error if column already exists
-    
-    log:printInfo("Database schema initialized successfully!");
-}
-
-// Database operations
-function createUser(string username, string email, string password) returns User|error {
-    string hashedPassword = hashPassword(password);
-    string userId = generateUserId();
-    
-    sql:ExecutionResult result = check dbClient->execute(`
-        INSERT INTO users (id, username, email, password_hash, is_active)
-        VALUES (${userId}, ${username}, ${email}, ${hashedPassword}, 1)
-    `);
-    
-    if result.affectedRowCount == 1 {
-        return getUserById(userId);
-    }
-    
-    return error("Failed to create user");
-}
-
-function getUserByUsername(string username) returns User|error? {
-    User|sql:Error result = dbClient->queryRow(`
-        SELECT id, username, email, password_hash, created_at, updated_at, is_active
-        FROM users WHERE username = ${username} AND is_active = 1
-    `);
-    
-    if result is sql:NoRowsError {
-        return ();
-    }
-    
-    return result;
-}
-
-function getUserByEmail(string email) returns User|error? {
-    User|sql:Error result = dbClient->queryRow(`
-        SELECT id, username, email, password_hash, created_at, updated_at, is_active
-        FROM users WHERE email = ${email} AND is_active = 1
-    `);
-    
-    if result is sql:NoRowsError {
-        return ();
-    }
-    
-    return result;
-}
-
-function getUserById(string userId) returns User|error {
-    return dbClient->queryRow(`
-        SELECT id, username, email, password_hash, created_at, updated_at, is_active
-        FROM users WHERE id = ${userId} AND is_active = 1
-    `);
-}
-
-function storeJWTToken(string userId, string tokenHash) returns string|error {
-    string tokenId = uuid:createType1AsString();
-    time:Utc currentTime = time:utcNow();
-    time:Utc expiryUtc = time:utcAddSeconds(currentTime, <decimal>jwtExpiryTime);
-    string expiryString = time:utcToString(expiryUtc);
-    
-    sql:ExecutionResult result = check dbClient->execute(`
-        INSERT INTO jwt_tokens (id, user_id, token_hash, expires_at, is_revoked)
-        VALUES (${tokenId}, ${userId}, ${tokenHash}, ${expiryString}, 0)
-    `);
-    
-    if result.affectedRowCount == 1 {
-        return tokenId;
-    }
-    
-    return error("Failed to store JWT token");
-}
-
-function isTokenValid(string tokenHash) returns boolean|error {
-    record {|string id;|}|sql:Error result = dbClient->queryRow(`
-        SELECT id FROM jwt_tokens 
-        WHERE token_hash = ${tokenHash} 
-        AND is_revoked = 0 
-        AND expires_at > CURRENT_TIMESTAMP
-    `);
-    
-    return !(result is sql:NoRowsError || result is sql:Error);
-}
-
-function revokeToken(string tokenHash) returns boolean|error {
-    sql:ExecutionResult result = check dbClient->execute(`
-        UPDATE jwt_tokens SET is_revoked = 1
-        WHERE token_hash = ${tokenHash}
-    `);
-    
-    return result.affectedRowCount > 0;
-}
-
-// Convert User to UserResponse (remove sensitive data)
-function toUserResponse(User user) returns UserResponse {
-    return {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        created_at: user.created_at,
-        updated_at: user.updated_at,
-        is_active: user.is_active
-    };
-}
-
-// API Key utility functions
-function generateApiKey() returns string {
-    // Generate a secure API key with prefix
-    string randomPart = crypto:hashSha256(uuid:createType1AsString().toBytes()).toBase16().substring(0, 32);
-    return string `ak_${randomPart}`;
-}
-
-function hashApiKey(string apiKey) returns string {
-    return crypto:hashSha256((apiKey + jwtSecret).toBytes()).toBase16();
-}
-
-function toApiKeyResponse(ApiKey apiKey) returns ApiKeyResponse {
-    int remainingQuota = apiKey.monthly_quota - apiKey.current_month_usage;
-    return {
-        id: apiKey.id,
-        name: apiKey.name,
-        description: apiKey.description,
-        rules: apiKey.rules,
-        status: apiKey.status,
-        usage_count: apiKey.usage_count,
-        monthly_quota: apiKey.monthly_quota,
-        current_month_usage: apiKey.current_month_usage,
-        remaining_quota: remainingQuota < 0 ? 0 : remainingQuota,
-        quota_reset_date: apiKey.quota_reset_date,
-        created_at: apiKey.created_at,
-        updated_at: apiKey.updated_at
-    };
-}
-
-// API Key database operations
-function createApiKey(string userId, string name, string? description, string[] rules) returns [ApiKey, string]|error {
-    // Check if user already has 3 API keys
-    int keyCount = check getApiKeyCountForUser(userId);
-    if keyCount >= 3 {
-        return error("Maximum of 3 API keys allowed per user");
-    }
-    
-    string apiKeyId = generateUserId();
-    string apiKey = generateApiKey();
-    string keyHash = hashApiKey(apiKey);
-    string rulesJson = rules.toJsonString();
-    
-    // Calculate next month's first day for quota reset (simplified approach)
-    time:Utc currentTime = time:utcNow();
-    time:Civil currentCivil = time:utcToCivil(currentTime);
-    
-    // Simple string-based date calculation for next month
-    int nextYear = currentCivil.month == 12 ? currentCivil.year + 1 : currentCivil.year;
-    int nextMonth = currentCivil.month == 12 ? 1 : currentCivil.month + 1;
-    string quotaResetDate = string `${nextYear}-${nextMonth < 10 ? "0" : ""}${nextMonth}-01`;
-    
-    sql:ExecutionResult result = check dbClient->execute(`
-        INSERT INTO api_keys (id, user_id, name, key_hash, description, rules, status, usage_count, monthly_quota, current_month_usage, quota_reset_date)
-        VALUES (${apiKeyId}, ${userId}, ${name}, ${keyHash}, ${description}, ${rulesJson}, 'active', 0, 100, 0, ${quotaResetDate})
-    `);
-    
-    if result.affectedRowCount == 1 {
-        ApiKey createdKey = check getApiKeyById(apiKeyId);
-        return [createdKey, apiKey];
-    }
-    
-    return error("Failed to create API key");
-}
-
-function getApiKeyCountForUser(string userId) returns int|error {
-    record {|int count;|}|sql:Error result = dbClient->queryRow(`
-        SELECT COUNT(*) as count FROM api_keys 
-        WHERE user_id = ${userId} AND status != 'revoked'
-    `);
-    
-    if result is sql:Error {
-        return 0;
-    }
-    
-    return result.count;
-}
-
-function getApiKeyById(string keyId) returns ApiKey|error {
-    record {|
-        string id;
-        string user_id;
-        string name;
-        string key_hash;
-        string? description;
-        string rules;
-        string status;
-        int usage_count;
-        int monthly_quota;
-        int current_month_usage;
-        string quota_reset_date;
-        string created_at;
-        string updated_at;
-    |}|sql:Error result = dbClient->queryRow(`
-        SELECT id, user_id, name, key_hash, description, rules, status, usage_count, monthly_quota, current_month_usage, quota_reset_date, created_at, updated_at
-        FROM api_keys WHERE id = ${keyId}
-    `);
-    
-    if result is sql:Error {
-        return error("API key not found");
-    }
-    
-    json rulesJson = check result.rules.fromJsonString();
-    string[] rulesArray = check rulesJson.cloneWithType();
-    
-    return {
-        id: result.id,
-        user_id: result.user_id,
-        name: result.name,
-        key_hash: result.key_hash,
-        description: result.description,
-        rules: rulesArray,
-        status: result.status,
-        usage_count: result.usage_count,
-        monthly_quota: result.monthly_quota,
-        current_month_usage: result.current_month_usage,
-        quota_reset_date: result.quota_reset_date,
-        created_at: result.created_at,
-        updated_at: result.updated_at
-    };
-}
-
-function getApiKeysByUserId(string userId) returns ApiKey[]|error {
-    stream<record {|
-        string id;
-        string user_id;
-        string name;
-        string key_hash;
-        string? description;
-        string rules;
-        string status;
-        int usage_count;
-        int monthly_quota;
-        int current_month_usage;
-        string quota_reset_date;
-        string created_at;
-        string updated_at;
-    |}, sql:Error?> resultStream = dbClient->query(`
-        SELECT id, user_id, name, key_hash, description, rules, status, usage_count, monthly_quota, current_month_usage, quota_reset_date, created_at, updated_at
-        FROM api_keys WHERE user_id = ${userId} AND status != 'revoked'
-        ORDER BY created_at DESC
-    `);
-    
-    ApiKey[] apiKeys = [];
-    check from var row in resultStream
-        do {
-            json rulesJson = check row.rules.fromJsonString();
-            string[] rulesArray = check rulesJson.cloneWithType();
-            apiKeys.push({
-                id: row.id,
-                user_id: row.user_id,
-                name: row.name,
-                key_hash: row.key_hash,
-                description: row.description,
-                rules: rulesArray,
-                status: row.status,
-                usage_count: row.usage_count,
-                monthly_quota: row.monthly_quota,
-                current_month_usage: row.current_month_usage,
-                quota_reset_date: row.quota_reset_date,
-                created_at: row.created_at,
-                updated_at: row.updated_at
-            });
-        };
-    
-    return apiKeys;
-}
-
-function validateApiKey(string apiKey) returns ApiKey|error {
-    string keyHash = hashApiKey(apiKey);
-    
-    record {|
-        string id;
-        string user_id;
-        string name;
-        string key_hash;
-        string? description;
-        string rules;
-        string status;
-        int usage_count;
-        int monthly_quota;
-        int current_month_usage;
-        string quota_reset_date;
-        string created_at;
-        string updated_at;
-    |}|sql:Error result = dbClient->queryRow(`
-        SELECT id, user_id, name, key_hash, description, rules, status, usage_count, monthly_quota, current_month_usage, quota_reset_date, created_at, updated_at
-        FROM api_keys WHERE key_hash = ${keyHash} AND status = 'active'
-    `);
-    
-    if result is sql:Error {
-        return error("Invalid API key");
-    }
-    
-    json rulesJson = check result.rules.fromJsonString();
-    string[] rulesArray = check rulesJson.cloneWithType();
-    
-    return {
-        id: result.id,
-        user_id: result.user_id,
-        name: result.name,
-        key_hash: result.key_hash,
-        description: result.description,
-        rules: rulesArray,
-        status: result.status,
-        usage_count: result.usage_count,
-        monthly_quota: result.monthly_quota,
-        current_month_usage: result.current_month_usage,
-        quota_reset_date: result.quota_reset_date,
-        created_at: result.created_at,
-        updated_at: result.updated_at
-    };
-}
-
-function incrementApiKeyUsage(string keyId) returns error? {
-    _ = check dbClient->execute(`
-        UPDATE api_keys 
-        SET usage_count = usage_count + 1, current_month_usage = current_month_usage + 1, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ${keyId}
-    `);
-}
-
-function checkQuotaLimit(ApiKey apiKey) returns boolean {
-    // Check if quota needs to be reset
-    time:Utc|error quotaResetTime = time:utcFromString(apiKey.quota_reset_date);
-    if quotaResetTime is error {
-        return false; // If we can't parse the date, assume quota exceeded for safety
-    }
-    
-    time:Utc currentTime = time:utcNow();
-    
-    // If current time is past the reset date, the quota should be reset
-    decimal timeDiff = time:utcDiffSeconds(currentTime, quotaResetTime);
-    if timeDiff >= 0d {
-        // Reset quota for this key
-        error? resetResult = resetMonthlyQuota(apiKey.id);
-        if resetResult is error {
-            return false; // If reset fails, assume quota exceeded for safety
-        }
-        return true; // After reset, quota is available
-    }
-    
-    // Check if current usage is within quota
-    return apiKey.current_month_usage < apiKey.monthly_quota;
-}
-
-function resetMonthlyQuota(string keyId) returns error? {
-    // Calculate next month's first day for new quota reset (simplified approach)
-    time:Utc currentTime = time:utcNow();
-    time:Civil currentCivil = time:utcToCivil(currentTime);
-    
-    // Simple string-based date calculation for next month
-    int nextYear = currentCivil.month == 12 ? currentCivil.year + 1 : currentCivil.year;
-    int nextMonth = currentCivil.month == 12 ? 1 : currentCivil.month + 1;
-    string quotaResetDate = string `${nextYear}-${nextMonth < 10 ? "0" : ""}${nextMonth}-01`;
-    
-    _ = check dbClient->execute(`
-        UPDATE api_keys 
-        SET current_month_usage = 0, quota_reset_date = ${quotaResetDate}, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ${keyId}
-    `);
-}
-
-function validateApiKeyWithQuota(string apiKey) returns [ApiKey, boolean]|error {
-    ApiKey validatedKey = check validateApiKey(apiKey);
-    boolean quotaAvailable = checkQuotaLimit(validatedKey);
-    return [validatedKey, quotaAvailable];
-}
-
-function updateApiKeyStatus(string keyId, string status) returns error? {
-    _ = check dbClient->execute(`
-        UPDATE api_keys 
-        SET status = ${status}, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ${keyId}
-    `);
-}
-
-function deleteApiKey(string keyId, string userId) returns boolean|error {
-    sql:ExecutionResult result = check dbClient->execute(`
-        UPDATE api_keys 
-        SET status = 'revoked', updated_at = CURRENT_TIMESTAMP
-        WHERE id = ${keyId} AND user_id = ${userId}
-    `);
-    
-    return result.affectedRowCount > 0;
-}
+import ballerina/crypto;
 
 @http:ServiceConfig {
     cors: {
@@ -623,13 +16,14 @@ service /api on new http:Listener(8080) {
     
     // Initialize database on service start
     function init() returns error? {
-        error? initResult = initializeDatabase(dbClient);
+        error? initResult = initializeDatabase();
         if initResult is error {
             log:printError("Failed to initialize database", initResult);
             return initResult;
         }
     }
 
+    // ===== HEALTH CHECK =====
     resource function get health() returns json {
         return {
             "status": "healthy", 
@@ -638,6 +32,8 @@ service /api on new http:Listener(8080) {
         };
     }
 
+    // ===== AUTHENTICATION ENDPOINTS =====
+    
     resource function post auth/register(@http:Payload json payload) returns http:Response {
         http:Response res = new;
         
@@ -706,9 +102,8 @@ service /api on new http:Listener(8080) {
             "user": toUserResponse(newUser)
         });
         return res;
-    }
-
-    resource function post auth/login(@http:Payload json payload) returns http:Response {
+    }    
+resource function post auth/login(@http:Payload json payload) returns http:Response {
         http:Response res = new;
         
         // Extract input
@@ -768,41 +163,16 @@ service /api on new http:Listener(8080) {
     resource function get auth/profile(http:Request req) returns http:Response {
         http:Response res = new;
         
-        // Get and validate authorization header
-        string|http:HeaderNotFoundError authHeader = req.getHeader("Authorization");
-        if authHeader is http:HeaderNotFoundError {
-            res.statusCode = 401;
-            res.setJsonPayload({"error": "No authorization header"});
-            return res;
-        }
-
-        if !authHeader.startsWith("Bearer ") {
-            res.statusCode = 401;
-            res.setJsonPayload({"error": "Invalid authorization format"});
-            return res;
-        }
-
-        string token = authHeader.substring(7);
-        
-        // Validate token
-        json|error payload = validateToken(token);
-        if payload is error {
+        // Validate JWT token and get user
+        json|error userPayload = validateTokenFromRequest(req);
+        if userPayload is error {
             res.statusCode = 401;
             res.setJsonPayload({"error": "Invalid or expired token"});
             return res;
         }
 
-        // Check if token exists in database and is not revoked
-        string tokenHash = crypto:hashSha256(token.toBytes()).toBase16();
-        boolean|error tokenValid = isTokenValid(tokenHash);
-        if tokenValid is error || !tokenValid {
-            res.statusCode = 401;
-            res.setJsonPayload({"error": "Token has been revoked or expired"});
-            return res;
-        }
-
         // Get user from token
-        json|error userIdField = payload.userId;
+        json|error userIdField = userPayload.userId;
         if userIdField is error {
             res.statusCode = 401;
             res.setJsonPayload({"error": "Invalid token claims"});
@@ -849,7 +219,8 @@ service /api on new http:Listener(8080) {
         return res;
     }
 
-    // API Key Management Endpoints
+    // ===== API KEY MANAGEMENT ENDPOINTS =====
+    
     resource function post apikeys(http:Request req, @http:Payload CreateApiKeyRequest payload) returns http:Response {
         http:Response res = new;
         
@@ -943,9 +314,8 @@ service /api on new http:Listener(8080) {
             "maxAllowed": 3
         });
         return res;
-    }
-
-    resource function put apikeys/[string keyId]/status(http:Request req, @http:Payload json payload) returns http:Response {
+    }  
+  resource function put apikeys/[string keyId]/status(http:Request req, @http:Payload json payload) returns http:Response {
         http:Response res = new;
         
         // Validate JWT token and get user
@@ -1148,43 +518,4 @@ service /api on new http:Listener(8080) {
         });
         return res;
     }
-}
-
-// Helper function to extract user ID from token payload
-function extractUserId(json payload) returns string|error {
-    json|error userIdField = payload.userId;
-    if userIdField is error {
-        return error("Invalid token claims");
-    }
-    return userIdField.toString();
-}
-
-// Helper function to validate token from request
-function validateTokenFromRequest(http:Request req) returns json|error {
-    // Get and validate authorization header
-    string|http:HeaderNotFoundError authHeader = req.getHeader("Authorization");
-    if authHeader is http:HeaderNotFoundError {
-        return error("No authorization header");
-    }
-
-    if !authHeader.startsWith("Bearer ") {
-        return error("Invalid authorization format");
-    }
-
-    string token = authHeader.substring(7);
-    
-    // Validate token
-    json|error payload = validateToken(token);
-    if payload is error {
-        return error("Invalid or expired token");
-    }
-
-    // Check if token exists in database and is not revoked
-    string tokenHash = crypto:hashSha256(token.toBytes()).toBase16();
-    boolean|error tokenValid = isTokenValid(tokenHash);
-    if tokenValid is error || !tokenValid {
-        return error("Token has been revoked or expired");
-    }
-    
-    return payload;
 }
