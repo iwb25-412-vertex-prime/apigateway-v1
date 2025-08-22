@@ -6,11 +6,19 @@ A comprehensive full-stack application featuring secure user authentication and 
 
 ```
 ├── ballerina-backend/          # Ballerina JWT authentication service
-│   ├── main.bal               # Main service implementation
+│   ├── main.bal               # Main service implementation (clean & organized)
+│   ├── types.bal              # Data models and type definitions
+│   ├── utils.bal              # Utility functions (validation, ID generation)
+│   ├── auth.bal               # Authentication & token management
+│   ├── database.bal           # Database operations & connection
+│   ├── apikeys.bal            # API key management operations
+│   ├── quota.bal              # Quota management system
 │   ├── Ballerina.toml         # Ballerina project configuration
 │   ├── Config.toml            # Service configuration
-│   ├── resources/             # Keystore and resources
-│   └── README.md              # Backend documentation
+│   ├── database/              # SQLite database files
+│   │   ├── userportal.db      # Main database file (auto-created)
+│   │   └── sqlite-schema.sql  # Database schema reference
+│   └── resources/             # Keystore and resources
 ├── userportal/                # Next.js frontend application
 │   ├── app/                   # Next.js app directory
 │   ├── components/            # React components
@@ -36,6 +44,14 @@ This project includes a complete authentication and API key management system wi
 - **Quota Management System** - Monthly usage limits (100 requests/month per key) with automatic reset
 - **Usage Tracking** - Real-time tracking of API key usage with detailed analytics
 - **Token Revocation** - Secure logout with immediate token invalidation
+- **Modular Architecture** - Clean, organized codebase with separated concerns:
+  - `main.bal` - Service endpoints and HTTP handling
+  - `types.bal` - Data models and type definitions
+  - `auth.bal` - Authentication and token management
+  - `database.bal` - Database operations and connections
+  - `apikeys.bal` - API key management functions
+  - `quota.bal` - Quota tracking and reset logic
+  - `utils.bal` - Utility functions and validation
 - **Database Tables Auto-Creation** - Three tables created automatically:
   - `users` - User account information with security features
   - `jwt_tokens` - Token tracking and revocation for security
@@ -703,20 +719,158 @@ Example token parts:
 - Data: `123e4567-e89b-12d3-a456-426614174000|john|john@example.com|1640995200`
 - Signature: `a1b2c3d4e5f6...` (SHA256 hash)
 
+## 🏗️ Modular Architecture
+
+The Ballerina backend has been refactored into a clean, modular architecture for better maintainability and code organization:
+
+### File Structure & Responsibilities
+
+#### `main.bal` - Service Layer
+
+- HTTP service configuration and CORS setup
+- All API endpoint definitions and request handling
+- Service initialization and health checks
+- Clean, focused on HTTP concerns only
+
+#### `types.bal` - Data Models
+
+- User, ApiKey, and request/response type definitions
+- Type conversion functions (toUserResponse, toApiKeyResponse)
+- Centralized type management for consistency
+
+#### `auth.bal` - Authentication System
+
+- JWT-like token generation and validation
+- Password hashing and verification
+- Token extraction and validation helpers
+- Authentication configuration (secrets, expiry)
+
+#### `database.bal` - Data Layer
+
+- Database connection and initialization
+- User CRUD operations
+- JWT token storage and validation
+- Database schema creation and migration
+- Performance indexes for optimal queries
+
+#### `apikeys.bal` - API Key Management
+
+- API key generation and hashing
+- API key CRUD operations
+- Key validation and status management
+- User key limit enforcement (max 3 keys)
+
+#### `quota.bal` - Quota System
+
+- Monthly quota tracking and enforcement
+- Automatic quota reset logic
+- Usage increment and validation
+- Quota availability checking
+
+#### `utils.bal` - Utility Functions
+
+- Input validation (email, password)
+- UUID generation for IDs
+- Common helper functions
+- Reusable validation logic
+
+### Benefits of Modular Design
+
+#### 🔧 Maintainability
+
+- **Single Responsibility**: Each file has a clear, focused purpose
+- **Easy Navigation**: Developers can quickly find relevant code
+- **Isolated Changes**: Modifications in one area don't affect others
+- **Clear Dependencies**: Import relationships show system architecture
+
+#### 🚀 Scalability
+
+- **Independent Development**: Teams can work on different modules
+- **Feature Addition**: New features can be added without touching core files
+- **Testing**: Individual modules can be tested in isolation
+- **Code Reuse**: Utility functions can be shared across modules
+
+#### 🛡️ Security
+
+- **Separation of Concerns**: Authentication logic isolated from business logic
+- **Clear Boundaries**: Database operations separated from HTTP handling
+- **Audit Trail**: Easy to track security-related code changes
+- **Configuration Management**: Centralized security configuration
+
+#### 📈 Performance
+
+- **Optimized Imports**: Only necessary modules are imported
+- **Database Efficiency**: Dedicated database layer with proper indexing
+- **Memory Management**: Clear object lifecycle management
+- **Query Optimization**: Database operations optimized for performance
+
+### Module Dependencies
+
+```
+main.bal
+├── types.bal (data models)
+├── auth.bal (authentication)
+├── database.bal (data operations)
+├── apikeys.bal (key management)
+├── quota.bal (quota system)
+└── utils.bal (utilities)
+
+auth.bal
+├── types.bal
+└── utils.bal
+
+database.bal
+├── types.bal
+├── auth.bal
+└── utils.bal
+
+apikeys.bal
+├── types.bal
+├── auth.bal
+├── database.bal
+└── utils.bal
+
+quota.bal
+├── types.bal
+├── apikeys.bal
+└── database.bal
+```
+
+### Development Workflow
+
+#### Adding New Features
+
+1. **Define Types**: Add new types to `types.bal`
+2. **Database Layer**: Add database operations to `database.bal`
+3. **Business Logic**: Create new module or extend existing ones
+4. **API Endpoints**: Add HTTP endpoints to `main.bal`
+5. **Utilities**: Add common functions to `utils.bal`
+
+#### Debugging & Maintenance
+
+1. **HTTP Issues**: Check `main.bal` for endpoint logic
+2. **Authentication Problems**: Review `auth.bal` for token handling
+3. **Database Errors**: Examine `database.bal` for query issues
+4. **API Key Issues**: Look at `apikeys.bal` for key management
+5. **Quota Problems**: Check `quota.bal` for usage tracking
+
 ## Features
 
 ### Backend (Ballerina)
 
+- **Modular Architecture**: Clean separation of concerns across multiple files
 - **Secure Authentication**: Custom JWT-like tokens with cryptographic signing
 - **Password Security**: SHA256 password hashing with salt
 - **SQLite Database**: Lightweight, file-based database for development
 - **Token Management**: Database tracking of all issued tokens
 - **Token Revocation**: Immediate token invalidation on logout
 - **API Key Management**: Create, manage, and validate API keys (up to 3 per user)
+- **Quota Management**: Monthly usage limits with automatic reset functionality
 - **Input Validation**: Email format and password strength validation
 - **Protected Endpoints**: Token validation for secure routes
 - **CORS Support**: Configured for frontend integration
 - **Auto-initialization**: Database schema created automatically
+- **Performance Optimized**: Database indexes for efficient queries
 
 ### Frontend (Next.js)
 
