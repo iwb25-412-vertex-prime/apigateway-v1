@@ -193,9 +193,51 @@ export function CreateApiKeyModal({
                       IMPORTANT: Save this key now!
                     </span>
                   </div>
-                  <code className="text-sm text-gray-900 font-mono break-all select-all bg-white p-2 rounded border block">
-                    {createdApiKey.apiKey.key}
-                  </code>
+                  <div className="relative">
+                    <code 
+                      id="api-key-display"
+                      className="text-sm text-gray-900 font-mono break-all select-all bg-white p-3 rounded border block pr-12"
+                    >
+                      {createdApiKey.key || 'API key not available'}
+                    </code>
+                    <button
+                      onClick={() => {
+                        const keyText = createdApiKey.key;
+                        if (keyText) {
+                          navigator.clipboard.writeText(keyText).then(() => {
+                            // Show temporary success feedback
+                            const button = document.getElementById('copy-button');
+                            if (button) {
+                              const originalText = button.innerHTML;
+                              button.innerHTML = '✓ Copied!';
+                              button.className = button.className.replace('text-gray-600', 'text-green-600');
+                              setTimeout(() => {
+                                button.innerHTML = originalText;
+                                button.className = button.className.replace('text-green-600', 'text-gray-600');
+                              }, 2000);
+                            }
+                          }).catch(() => {
+                            // Fallback: select the text
+                            const element = document.getElementById('api-key-display');
+                            if (element) {
+                              const range = document.createRange();
+                              range.selectNodeContents(element);
+                              const selection = window.getSelection();
+                              selection?.removeAllRanges();
+                              selection?.addRange(range);
+                            }
+                          });
+                        }
+                      }}
+                      id="copy-button"
+                      className="absolute right-2 top-2 p-1 text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded"
+                      title="Copy API key"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </button>
+                  </div>
                   <p className="text-xs text-yellow-700 mt-2">
                     This is the only time you'll see this key. Copy and store it
                     securely - you won't be able to retrieve it again.

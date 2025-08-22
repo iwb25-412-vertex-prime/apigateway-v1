@@ -27,13 +27,13 @@ export interface CreateApiKeyResponse {
     id: string;
     name: string;
     description?: string;
-    key: string; // The actual API key (only returned on creation)
     rules: string[];
     status: string;
     usage_count: number;
     created_at: string;
     updated_at: string;
   };
+  key: string; // The actual API key (only returned on creation)
 }
 
 export interface UpdateApiKeyStatusRequest {
