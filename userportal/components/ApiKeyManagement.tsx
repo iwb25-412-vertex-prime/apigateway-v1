@@ -35,9 +35,9 @@ export function ApiKeyManagement() {
 
   const handleCreateApiKey = async (data: CreateApiKeyRequest) => {
     try {
-      await ApiKeyService.createApiKey(data);
-      setShowCreateModal(false);
+      const result = await ApiKeyService.createApiKey(data);
       await loadApiKeys(); // Reload the list
+      return result; // Return result for modal to display
     } catch (err) {
       throw err; // Let the modal handle the error
     }

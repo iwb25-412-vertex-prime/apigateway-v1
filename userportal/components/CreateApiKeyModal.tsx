@@ -9,7 +9,7 @@ import {
 
 interface CreateApiKeyModalProps {
   onClose: () => void;
-  onSubmit: (data: CreateApiKeyRequest) => Promise<void>;
+  onSubmit: (data: CreateApiKeyRequest) => Promise<CreateApiKeyResponse | void>;
 }
 
 const COMMON_CONTENT_POLICIES = [
@@ -57,8 +57,10 @@ export function CreateApiKeyModal({
     setError(null);
 
     try {
-      const result = await ApiKeyService.createApiKey(formData);
-      setCreatedApiKey(result);
+      const result = await onSubmit(formData);
+      if (result) {
+        setCreatedApiKey(result);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create API key");
     } finally {
@@ -94,10 +96,6 @@ export function CreateApiKeyModal({
   };
 
   const handleClose = () => {
-    if (createdApiKey) {
-      // If API key was created successfully, trigger parent refresh
-      onSubmit(formData).catch(() => {}); // Ignore errors, just refresh
-    }
     onClose();
   };
 
