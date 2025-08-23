@@ -95,7 +95,7 @@ export function ApiKeyManagement() {
   const canCreateMore = activeKeys.length < 3;
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-7xl mx-auto">
       <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
           <div>

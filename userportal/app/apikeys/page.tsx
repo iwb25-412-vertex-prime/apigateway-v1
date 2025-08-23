@@ -1,11 +1,14 @@
 'use client';
 
+import { DashboardLayout } from '@/components/DashboardLayout';
 import { ApiKeyManagement } from '@/components/ApiKeyManagement';
 
 export default function ApiKeysPage() {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <ApiKeyManagement />
-    </div>
+    <DashboardLayout>
+      <div className="p-6">
+        <ApiKeyManagement />
+      </div>
+    </DashboardLayout>
   );
 }
