@@ -69,7 +69,7 @@ export function DashboardHome() {
     },
     {
       title: 'View Documentation',
-      description: 'Learn how to integrate ContentGuard API',
+      description: 'Learn how to integrate Moderato API',
       href: '#',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -75,7 +75,7 @@ export function Sidebar({ onToggle }: SidebarProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
             </div>
-            <span className="text-lg font-bold text-gray-900">ContentGuard</span>
+            <span className="text-lg font-bold text-gray-900">Modarato</span>
           </Link>
         )}
         <button
@@ -84,9 +84,9 @@ export function Sidebar({ onToggle }: SidebarProps) {
             setIsCollapsed(newCollapsed);
             onToggle?.(newCollapsed);
           }}
-          className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+          className={`rounded-lg hover:bg-gray-100 transition-colors ${isCollapsed ? 'p-2' : 'p-1.5'}`}
         >
-          <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className={`text-gray-500 ${isCollapsed ? 'w-6 h-6' : 'w-5 h-5'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isCollapsed ? "M9 5l7 7-7 7" : "M15 19l-7-7 7-7"} />
           </svg>
         </button>
@@ -102,10 +102,14 @@ export function Sidebar({ onToggle }: SidebarProps) {
             return (
               <div
                 key={item.name}
-                className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-400 cursor-not-allowed ${isCollapsed ? 'justify-center' : ''}`}
+                className={`flex items-center space-x-3 rounded-lg text-gray-400 cursor-not-allowed ${
+                  isCollapsed ? 'justify-center px-2 py-3' : 'px-3 py-2'
+                }`}
                 title={isCollapsed ? item.name : ''}
               >
-                {item.icon}
+                <div className={isCollapsed ? 'scale-125' : ''}>
+                  {item.icon}
+                </div>
                 {!isCollapsed && <span className="text-sm font-medium">{item.name}</span>}
                 {!isCollapsed && <span className="text-xs text-gray-300 ml-auto">Soon</span>}
               </div>
@@ -116,14 +120,18 @@ export function Sidebar({ onToggle }: SidebarProps) {
             <Link
               key={item.name}
               href={item.href}
-              className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${isCollapsed ? 'justify-center' : ''} ${
+              className={`flex items-center space-x-3 rounded-lg transition-colors ${
+                isCollapsed ? 'justify-center px-2 py-3' : 'px-3 py-2'
+              } ${
                 isActive
                   ? 'bg-blue-50 text-blue-700 border border-blue-200'
                   : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
               }`}
               title={isCollapsed ? item.name : ''}
             >
-              {item.icon}
+              <div className={isCollapsed ? 'scale-125' : ''}>
+                {item.icon}
+              </div>
               {!isCollapsed && <span className="text-sm font-medium">{item.name}</span>}
             </Link>
           );
@@ -147,12 +155,16 @@ export function Sidebar({ onToggle }: SidebarProps) {
         )}
         <button
           onClick={handleLogout}
-          className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors ${isCollapsed ? 'justify-center' : ''}`}
+          className={`w-full flex items-center space-x-3 rounded-lg text-red-600 hover:bg-red-50 transition-colors ${
+            isCollapsed ? 'justify-center px-2 py-3' : 'px-3 py-2'
+          }`}
           title={isCollapsed ? 'Logout' : ''}
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
+          <div className={isCollapsed ? 'scale-125' : ''}>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+          </div>
           {!isCollapsed && <span className="text-sm font-medium">Logout</span>}
         </button>
       </div>
