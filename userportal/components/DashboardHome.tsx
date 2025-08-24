@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
+import { AuthService } from "@/lib/auth";
 import { useState, useEffect } from "react";
 
 interface ApiKeyStats {
@@ -14,6 +15,7 @@ interface ApiKeyStats {
 interface DashboardState {
   stats: ApiKeyStats;
   loading: boolean;
+  refreshing: boolean;
   lastUpdated: Date | null;
 }
 
@@ -27,41 +29,69 @@ export function DashboardHome() {
       monthlyUsage: 0,
     },
     loading: true,
+    refreshing: false,
     lastUpdated: null,
   });
 
   // Fetch API key statistics
-  const fetchStats = async (showLoading = false) => {
-    if (showLoading) {
+  const fetchStats = async (isManualRefresh = false) => {
+    console.log("fetchStats called, isManualRefresh:", isManualRefresh);
+    
+    // Set appropriate loading state
+    if (isManualRefresh) {
+      setDashboardState((prev) => ({ ...prev, refreshing: true }));
+    } else if (dashboardState.stats.totalKeys === 0) {
+      // Only show main loading on initial load
       setDashboardState((prev) => ({ ...prev, loading: true }));
     }
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) return;
+      const token = AuthService.getToken();
+      console.log("Token exists:", !!token);
+      console.log("Is authenticated:", AuthService.isAuthenticated());
+      
+      if (!token || !AuthService.isAuthenticated()) {
+        console.log("No valid token found, clearing loading states");
+        setDashboardState((prev) => ({ 
+          ...prev, 
+          loading: false, 
+          refreshing: false 
+        }));
+        return;
+      }
 
-      const response = await fetch("http://localhost:8080/api/apikeys", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      console.log("Making API request to /api/apikeys");
+      const response = await AuthService.authenticatedFetch("http://localhost:8080/api/apikeys");
+
+      console.log("API response status:", response.status);
 
       if (response.ok) {
         const data = await response.json();
+        console.log("API response data:", data);
+        
         const apiKeys = data.apiKeys || [];
+        console.log("API keys array:", apiKeys);
 
         const totalKeys = apiKeys.length;
         const activeKeys = apiKeys.filter(
           (key: any) => key.status === "active"
         ).length;
         const totalUsage = apiKeys.reduce(
-          (sum: number, key: any) => sum + (key.usage_count || 0),
+          (sum: number, key: any) => {
+            console.log(`Adding usage_count: ${key.usage_count} to sum: ${sum}`);
+            return sum + (key.usage_count || 0);
+          },
           0
         );
         const monthlyUsage = apiKeys.reduce(
-          (sum: number, key: any) => sum + (key.current_month_usage || 0),
+          (sum: number, key: any) => {
+            console.log(`Adding current_month_usage: ${key.current_month_usage} to sum: ${sum}`);
+            return sum + (key.current_month_usage || 0);
+          },
           0
         );
+
+        console.log("Calculated stats:", { totalKeys, activeKeys, totalUsage, monthlyUsage });
 
         setDashboardState({
           stats: {
@@ -71,24 +101,30 @@ export function DashboardHome() {
             monthlyUsage,
           },
           loading: false,
+          refreshing: false,
           lastUpdated: new Date(),
         });
       } else {
-        console.error(
-          "Failed to fetch API keys:",
-          response.status,
-          response.statusText
-        );
-        setDashboardState((prev) => ({ ...prev, loading: false }));
+        const errorText = await response.text();
+        console.error("API request failed:", response.status, response.statusText, errorText);
+        setDashboardState((prev) => ({ 
+          ...prev, 
+          loading: false, 
+          refreshing: false 
+        }));
       }
     } catch (error) {
       console.error("Failed to fetch API key stats:", error);
-      setDashboardState((prev) => ({ ...prev, loading: false }));
+      setDashboardState((prev) => ({ 
+        ...prev, 
+        loading: false, 
+        refreshing: false 
+      }));
     }
   };
 
   useEffect(() => {
-    fetchStats(true);
+    fetchStats(false); // Initial load
 
     // Set up periodic refresh every 30 seconds to keep stats updated
     const interval = setInterval(() => fetchStats(false), 30000);
@@ -166,7 +202,7 @@ export function DashboardHome() {
     },
   ];
 
-  const { stats, loading, lastUpdated } = dashboardState;
+  const { stats, loading, refreshing, lastUpdated } = dashboardState;
 
   const statCards = [
     {
@@ -267,14 +303,15 @@ export function DashboardHome() {
               Last updated: {lastUpdated.toLocaleTimeString()}
             </p>
           )}
+
         </div>
         <button
           onClick={() => fetchStats(true)}
-          disabled={loading}
+          disabled={refreshing}
           className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           <svg
-            className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
+            className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -286,7 +323,7 @@ export function DashboardHome() {
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
             />
           </svg>
-          {loading ? "Refreshing..." : "Refresh"}
+          {refreshing ? "Refreshing..." : "Refresh"}
         </button>
       </div>
 
