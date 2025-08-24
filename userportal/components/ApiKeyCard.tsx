@@ -2,16 +2,19 @@
 
 import { useState } from 'react';
 import { ApiKey } from '@/lib/apikeys';
+import { ManageRulesModal } from './ManageRulesModal';
 
 interface ApiKeyCardProps {
   apiKey: ApiKey;
   onUpdateStatus: (keyId: string, status: 'active' | 'inactive') => Promise<void>;
   onDelete: (keyId: string) => Promise<void>;
+  onUpdate: (updatedApiKey: ApiKey) => void;
 }
 
-export function ApiKeyCard({ apiKey, onUpdateStatus, onDelete }: ApiKeyCardProps) {
+export function ApiKeyCard({ apiKey, onUpdateStatus, onDelete, onUpdate }: ApiKeyCardProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showRulesModal, setShowRulesModal] = useState(false);
 
   const handleStatusToggle = async () => {
     if (isUpdating) return;
@@ -123,9 +126,19 @@ export function ApiKeyCard({ apiKey, onUpdateStatus, onDelete }: ApiKeyCardProps
       </div>
 
       {/* Content Rules */}
-      {apiKey.rules && apiKey.rules.length > 0 && (
-        <div className="mb-4">
-          <p className="text-sm font-medium text-slate-600 mb-2">Content Rules:</p>
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-sm font-medium text-slate-600">Content Rules:</p>
+          {apiKey.status !== 'revoked' && (
+            <button
+              onClick={() => setShowRulesModal(true)}
+              className="text-xs text-orange-600 hover:text-orange-800 font-medium"
+            >
+              Manage Rules
+            </button>
+          )}
+        </div>
+        {apiKey.rules && apiKey.rules.length > 0 ? (
           <div className="flex flex-wrap gap-1">
             {apiKey.rules.slice(0, 3).map((rule, index) => (
               <span
@@ -141,8 +154,10 @@ export function ApiKeyCard({ apiKey, onUpdateStatus, onDelete }: ApiKeyCardProps
               </span>
             )}
           </div>
-        </div>
-      )}
+        ) : (
+          <p className="text-xs text-slate-500 italic">No rules configured</p>
+        )}
+      </div>
 
       {/* Actions */}
       <div className="flex items-center justify-between pt-3 border-t border-slate-200">
@@ -176,6 +191,15 @@ export function ApiKeyCard({ apiKey, onUpdateStatus, onDelete }: ApiKeyCardProps
           </button>
         </div>
       </div>
+
+      {/* Rules Management Modal */}
+      {showRulesModal && (
+        <ManageRulesModal
+          apiKey={apiKey}
+          onClose={() => setShowRulesModal(false)}
+          onUpdate={onUpdate}
+        />
+      )}
     </div>
   );
 }

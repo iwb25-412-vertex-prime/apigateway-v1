@@ -376,6 +376,70 @@ resource function post auth/login(@http:Payload json payload) returns http:Respo
         return res;
     }
 
+    resource function put apikeys/[string keyId]/rules(http:Request req, @http:Payload UpdateApiKeyRulesRequest payload) returns http:Response {
+        http:Response res = new;
+        
+        // Validate JWT token and get user
+        json|error userPayload = validateTokenFromRequest(req);
+        if userPayload is error {
+            res.statusCode = 401;
+            res.setJsonPayload({"error": "Invalid or expired token"});
+            return res;
+        }
+        
+        string|error userIdResult = extractUserId(userPayload);
+        if userIdResult is error {
+            res.statusCode = 401;
+            res.setJsonPayload({"error": "Invalid token claims"});
+            return res;
+        }
+        string userId = userIdResult;
+        
+        // Verify the API key belongs to the user and is not revoked
+        ApiKey|error apiKey = getApiKeyById(keyId);
+        if apiKey is error {
+            res.statusCode = 404;
+            res.setJsonPayload({"error": "API key not found"});
+            return res;
+        }
+        
+        if apiKey.user_id != userId {
+            res.statusCode = 403;
+            res.setJsonPayload({"error": "Access denied"});
+            return res;
+        }
+        
+        if apiKey.status == "revoked" {
+            res.statusCode = 400;
+            res.setJsonPayload({"error": "Cannot update rules for revoked API key"});
+            return res;
+        }
+        
+        // Update rules
+        error? updateResult = updateApiKeyRules(keyId, userId, payload.rules);
+        if updateResult is error {
+            log:printError("Failed to update API key rules", updateResult);
+            res.statusCode = 500;
+            res.setJsonPayload({"error": "Failed to update API key rules"});
+            return res;
+        }
+        
+        // Get updated API key data
+        ApiKey|error updatedKey = getApiKeyById(keyId);
+        if updatedKey is error {
+            res.statusCode = 500;
+            res.setJsonPayload({"error": "Failed to retrieve updated API key"});
+            return res;
+        }
+        
+        log:printInfo("API key rules updated successfully for key: " + keyId);
+        res.setJsonPayload({
+            "message": "API key rules updated successfully",
+            "apiKey": toApiKeyResponse(updatedKey)
+        });
+        return res;
+    }
+
     resource function delete apikeys/[string keyId](http:Request req) returns http:Response {
         http:Response res = new;
         

@@ -41,6 +41,7 @@ This project includes a complete authentication and API key management system wi
 - **Password Security** - SHA256 hashing with salt for password protection
 - **SQLite Database Integration** - Automatic database creation and management with proper indexing
 - **API Key Management System** - Create, manage, and validate API keys (max 3 per user)
+- **Dynamic Rule Management** - Update content policy rules for API keys after creation
 - **Quota Management System** - Monthly usage limits (100 requests/month per key) with automatic reset
 - **Usage Tracking** - Real-time tracking of API key usage with detailed analytics
 - **Token Revocation** - Secure logout with immediate token invalidation
@@ -213,6 +214,18 @@ Content-Type: application/json
 }
 ```
 
+#### Update API Key Rules
+
+```bash
+PUT /api/apikeys/{keyId}/rules
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+
+{
+  "rules": ["no-spam-content", "no-adult-content", "family-friendly-only"]
+}
+```
+
 #### Delete API Key
 
 ```bash
@@ -311,6 +324,38 @@ Authorization: Bearer <jwt_token>
      -d '{"apiKey": "ak_a1b2c3d4e5f6789012345678901234567890abcd"}'
    ```
 
+### Dynamic Rule Management
+
+**NEW FEATURE**: You can now update content policy rules for existing API keys after creation!
+
+#### Frontend Rule Management
+
+- **Manage Rules Button**: Each API key card now has a "Manage Rules" button
+- **Rule Editor Modal**: Interactive interface to add/remove rules
+- **Real-time Updates**: Changes take effect immediately
+- **Visual Feedback**: See current rules and changes before applying
+
+#### Backend Rule Updates
+
+Update rules programmatically using the API:
+
+```bash
+curl -X PUT http://localhost:8080/api/apikeys/KEY_ID/rules \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "rules": ["no-spam-content", "no-adult-content", "family-friendly-only"]
+  }'
+```
+
+#### Rule Management Features
+
+- **Add/Remove Rules**: Modify rules without recreating API keys
+- **Common Policies**: Pre-defined content policy options
+- **Custom Rules**: Add your own custom policy rules
+- **Validation**: Prevents updates to revoked API keys
+- **Audit Trail**: All rule changes are logged with timestamps
+
 ### Testing API Keys
 
 Use the provided test scripts to test the API key functionality:
@@ -319,6 +364,7 @@ Use the provided test scripts to test the API key functionality:
 
 ```bash
 test-apikeys.bat
+test-rules-update.bat  # NEW: Test rule management
 ```
 
 **Unix/Linux/macOS:**
@@ -326,9 +372,12 @@ test-apikeys.bat
 ```bash
 chmod +x test-apikeys.sh
 ./test-apikeys.sh
+
+chmod +x test-rules-update.sh  # NEW: Test rule management
+./test-rules-update.sh
 ```
 
-These scripts will:
+The original test scripts will:
 
 1. Register a test user
 2. Login to get a JWT token
@@ -336,6 +385,13 @@ These scripts will:
 4. Try to create a 4th key (should fail)
 5. List all API keys
 6. Test API key validation
+
+The new rule management test script will:
+
+1. Create an API key with initial rules
+2. Update the rules dynamically
+3. Verify the changes
+4. Test with empty rules
 
 ### 🗄️ Database Schema
 

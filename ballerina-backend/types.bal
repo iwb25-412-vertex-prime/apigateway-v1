@@ -58,6 +58,10 @@ public type CreateApiKeyRequest record {|
     string[] rules?;
 |};
 
+public type UpdateApiKeyRulesRequest record {|
+    string[] rules;
+|};
+
 // Convert User to UserResponse (remove sensitive data)
 public function toUserResponse(User user) returns UserResponse {
     return {

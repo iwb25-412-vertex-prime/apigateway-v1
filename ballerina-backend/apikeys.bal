@@ -216,6 +216,20 @@ public function updateApiKeyStatus(string keyId, string status) returns error? {
     `);
 }
 
+public function updateApiKeyRules(string keyId, string userId, string[] rules) returns error? {
+    string rulesJson = rules.toJsonString();
+    
+    sql:ExecutionResult result = check dbClient->execute(`
+        UPDATE api_keys 
+        SET rules = ${rulesJson}, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ${keyId} AND user_id = ${userId} AND status != 'revoked'
+    `);
+    
+    if result.affectedRowCount == 0 {
+        return error("API key not found or access denied");
+    }
+}
+
 public function deleteApiKey(string keyId, string userId) returns boolean|error {
     sql:ExecutionResult result = check dbClient->execute(`
         UPDATE api_keys 

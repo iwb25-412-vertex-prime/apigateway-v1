@@ -80,6 +80,14 @@ export function ApiKeyManagement() {
     }
   };
 
+  const handleUpdateApiKey = (updatedApiKey: ApiKey) => {
+    setApiKeys(prev => 
+      prev.map(key => 
+        key.id === updatedApiKey.id ? updatedApiKey : key
+      )
+    );
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="text-center py-8">
@@ -163,6 +171,7 @@ export function ApiKeyManagement() {
               apiKey={apiKey}
               onUpdateStatus={handleUpdateStatus}
               onDelete={handleDeleteApiKey}
+              onUpdate={handleUpdateApiKey}
             />
           ))}
         </div>
