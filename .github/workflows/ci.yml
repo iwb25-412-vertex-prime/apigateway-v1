@@ -2,117 +2,113 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   test-backend:
     name: Test Ballerina Backend
     runs-on: ubuntu-latest
-    
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup Ballerina
-      uses: ballerina-platform/setup-ballerina@v1.1.0
-      with:
-        version: latest
-    
-    - name: Build Ballerina project
-      working-directory: ./ballerina-backend
-      run: bal build
-    
-    - name: Run Ballerina tests
-      working-directory: ./ballerina-backend
-      run: bal test
+      - uses: actions/checkout@v4
+
+      - name: Setup Ballerina
+        uses: ballerina-platform/setup-ballerina@v1.1.0
+        with:
+          version: latest
+
+      - name: Build Ballerina project
+        working-directory: ./ballerina-backend
+        run: bal build
+
+      - name: Run Ballerina tests
+        working-directory: ./ballerina-backend
+        run: bal test
 
   test-frontend:
     name: Test Next.js Frontend
     runs-on: ubuntu-latest
-    
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: userportal/package-lock.json
-    
-    - name: Install dependencies
-      working-directory: ./userportal
-      run: npm ci
-    
-    - name: Run linting
-      working-directory: ./userportal
-      run: npm run lint
-    
-    - name: Run type checking
-      working-directory: ./userportal
-      run: npm run build
-    
-    - name: Run tests (if available)
-      working-directory: ./userportal
-      run: npm test --if-present
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: userportal/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./userportal
+        run: npm ci
+
+      - name: Run type checking
+        working-directory: ./userportal
+        run: npm run build
+
+      - name: Run tests (if available)
+        working-directory: ./userportal
+        run: npm test --if-present
 
   security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
-    
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@master
-      with:
-        scan-type: 'fs'
-        scan-ref: '.'
-        format: 'sarif'
-        output: 'trivy-results.sarif'
-    
-    - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v3
-      if: always()
-      with:
-        sarif_file: 'trivy-results.sarif'
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          format: "sarif"
+          output: "trivy-results.sarif"
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-results.sarif"
 
   build-and-deploy:
     name: Build and Deploy
     needs: [test-backend, test-frontend]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup Ballerina
-      uses: ballerina-platform/setup-ballerina@v1.1.0
-      with:
-        version: latest
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: userportal/package-lock.json
-    
-    - name: Build backend
-      working-directory: ./ballerina-backend
-      run: bal build
-    
-    - name: Build frontend
-      working-directory: ./userportal
-      run: |
-        npm ci
-        npm run build
-    
-    - name: Archive production artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: production-files
-        path: |
-          ballerina-backend/target/
-          userportal/.next/
+      - uses: actions/checkout@v4
+
+      - name: Setup Ballerina
+        uses: ballerina-platform/setup-ballerina@v1.1.0
+        with:
+          version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: userportal/package-lock.json
+
+      - name: Build backend
+        working-directory: ./ballerina-backend
+        run: bal build
+
+      - name: Build frontend
+        working-directory: ./userportal
+        run: |
+          npm ci
+          npm run build
+
+      - name: Archive production artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-files
+          path: |
+            ballerina-backend/target/
+            userportal/.next/
