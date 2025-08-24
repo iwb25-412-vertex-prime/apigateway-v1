@@ -164,6 +164,10 @@ docker-compose.override.yml
 *.yml
 k8s/
 
+# Allow GitHub workflows
+!.github/workflows/*.yml
+!.github/workflows/*.yaml
+
 # Terraform
 *.tfstate
 *.tfstate.*
