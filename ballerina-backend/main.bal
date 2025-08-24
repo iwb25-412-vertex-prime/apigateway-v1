@@ -8,7 +8,7 @@ import ballerina/crypto;
     cors: {
         allowOrigins: ["http://localhost:3000", "http://localhost:3001"],
         allowCredentials: true,
-        allowHeaders: ["Authorization", "Content-Type"],
+        allowHeaders: ["Authorization", "Content-Type", "X-API-Key"],
         allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     }
 }
@@ -102,8 +102,9 @@ service /api on new http:Listener(8080) {
             "user": toUserResponse(newUser)
         });
         return res;
-    }    
-resource function post auth/login(@http:Payload json payload) returns http:Response {
+    }
+
+    resource function post auth/login(@http:Payload json payload) returns http:Response {
         http:Response res = new;
         
         // Extract input
@@ -314,8 +315,9 @@ resource function post auth/login(@http:Payload json payload) returns http:Respo
             "maxAllowed": 3
         });
         return res;
-    }  
-  resource function put apikeys/[string keyId]/status(http:Request req, @http:Payload json payload) returns http:Response {
+    }
+
+    resource function put apikeys/[string keyId]/status(http:Request req, @http:Payload json payload) returns http:Response {
         http:Response res = new;
         
         // Validate JWT token and get user
@@ -582,8 +584,8 @@ resource function post auth/login(@http:Payload json payload) returns http:Respo
         });
         return res;
     }
-}    // 
-===== PUBLIC API ENDPOINTS (API KEY AUTHENTICATION) =====
+
+    // ===== PUBLIC API ENDPOINTS (API KEY AUTHENTICATION) =====
     
     // Get all users - requires 'read' permission
     resource function get users(http:Request req) returns http:Response {
@@ -599,7 +601,8 @@ resource function post auth/login(@http:Payload json payload) returns http:Respo
         [ApiKey, boolean] [apiKey, _] = validation;
         
         // Check if API key has 'read' permission
-        if !apiKey.rules.indexOf("read") is int {
+        int? readIndex = apiKey.rules.indexOf("read");
+        if readIndex is () {
             res.statusCode = 403;
             res.setJsonPayload({"error": "API key does not have 'read' permission"});
             return res;
@@ -627,7 +630,8 @@ resource function post auth/login(@http:Payload json payload) returns http:Respo
         [ApiKey, boolean] [apiKey, _] = validation;
         
         // Check permissions
-        if !apiKey.rules.indexOf("read") is int {
+        int? readIndex = apiKey.rules.indexOf("read");
+        if readIndex is () {
             res.statusCode = 403;
             res.setJsonPayload({"error": "API key does not have 'read' permission"});
             return res;
@@ -669,7 +673,8 @@ resource function post auth/login(@http:Payload json payload) returns http:Respo
         [ApiKey, boolean] [apiKey, _] = validation;
         
         // Check permissions
-        if !apiKey.rules.indexOf("read") is int {
+        int? readIndex = apiKey.rules.indexOf("read");
+        if readIndex is () {
             res.statusCode = 403;
             res.setJsonPayload({"error": "API key does not have 'read' permission"});
             return res;
@@ -697,7 +702,8 @@ resource function post auth/login(@http:Payload json payload) returns http:Respo
         [ApiKey, boolean] [apiKey, _] = validation;
         
         // Check permissions
-        if !apiKey.rules.indexOf("write") is int {
+        int? writeIndex = apiKey.rules.indexOf("write");
+        if writeIndex is () {
             res.statusCode = 403;
             res.setJsonPayload({"error": "API key does not have 'write' permission"});
             return res;
@@ -755,7 +761,8 @@ resource function post auth/login(@http:Payload json payload) returns http:Respo
         [ApiKey, boolean] [apiKey, _] = validation;
         
         // Check permissions
-        if !apiKey.rules.indexOf("analytics") is int {
+        int? analyticsIndex = apiKey.rules.indexOf("analytics");
+        if analyticsIndex is () {
             res.statusCode = 403;
             res.setJsonPayload({"error": "API key does not have 'analytics' permission"});
             return res;
@@ -794,7 +801,8 @@ resource function post auth/login(@http:Payload json payload) returns http:Respo
         [ApiKey, boolean] [apiKey, _] = validation;
         
         // Check permissions
-        if !apiKey.rules.indexOf("moderate") is int {
+        int? moderateIndex = apiKey.rules.indexOf("moderate");
+        if moderateIndex is () {
             res.statusCode = 403;
             res.setJsonPayload({"error": "API key does not have 'moderate' permission"});
             return res;
@@ -888,11 +896,18 @@ resource function post auth/login(@http:Payload json payload) returns http:Respo
                     "description": "Get analytics summary",
                     "permissions": ["analytics"],
                     "response": "Analytics data object"
+                },
+                "POST /api/moderate-content/text/v1": {
+                    "description": "Moderate text content",
+                    "permissions": ["moderate"],
+                    "body": {"text": "string"},
+                    "response": "Moderation result object"
                 }
             },
             "permissions": {
                 "read": "Access to GET endpoints for users and projects",
                 "write": "Access to POST/PUT/DELETE endpoints",
+                "moderate": "Access to content moderation endpoints",
                 "analytics": "Access to analytics endpoints"
             },
             "rate_limits": {
@@ -901,3 +916,4 @@ resource function post auth/login(@http:Payload json payload) returns http:Respo
             }
         };
     }
+}
