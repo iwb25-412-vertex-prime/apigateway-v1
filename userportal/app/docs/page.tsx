@@ -1,7 +1,6 @@
 "use client";
 
-import { DashboardLayout } from "@/components/DashboardLayout";
-import { ApiDocumentation } from "@/components/ApiDocumentation";
+import { DashboardLayout, ApiDocumentation } from "@/components";
 
 export default function DocsPage() {
   return (

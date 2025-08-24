@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CodeBlock } from "./CodeBlock";
-import { EndpointCard } from "./EndpointCard";
+import { CodeBlock, EndpointCard } from "./index";
 
 interface Endpoint {
   method: string;
