@@ -21,6 +21,14 @@ service /api on new http:Listener(8080) {
             log:printError("Failed to initialize database", initResult);
             return initResult;
         }
+        
+        // Fix existing API keys with incorrect quota dates
+        error? quotaFixResult = fixExistingApiKeyQuotas();
+        if quotaFixResult is error {
+            log:printError("Failed to fix existing API key quotas", quotaFixResult);
+        } else {
+            log:printInfo("Fixed existing API key quotas");
+        }
     }
 
     // ===== HEALTH CHECK =====
