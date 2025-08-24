@@ -58,6 +58,10 @@ export interface UpdateApiKeyStatusRequest {
   status: 'active' | 'inactive';
 }
 
+export interface UpdateApiKeyRulesRequest {
+  rules: string[];
+}
+
 export class ApiKeyService {
   // Get authentication token from localStorage
   private static getToken(): string | null {
@@ -140,6 +144,34 @@ export class ApiKeyService {
       return true;
     } catch (error) {
       console.error("Update API key status error:", error);
+      throw error;
+    }
+  }
+
+  // Update API key rules
+  static async updateApiKeyRules(keyId: string, rules: string[]): Promise<ApiKey> {
+    try {
+      const token = this.getToken();
+      if (!token) throw new Error("No authentication token");
+
+      const response = await fetch(`${API_BASE_URL}/apikeys/${keyId}/rules`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ rules }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to update API key rules");
+      }
+
+      const result = await response.json();
+      return result.apiKey;
+    } catch (error) {
+      console.error("Update API key rules error:", error);
       throw error;
     }
   }

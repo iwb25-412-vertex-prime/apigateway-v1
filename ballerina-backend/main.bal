@@ -8,7 +8,7 @@ import ballerina/crypto;
     cors: {
         allowOrigins: ["http://localhost:3000", "http://localhost:3001"],
         allowCredentials: true,
-        allowHeaders: ["Authorization", "Content-Type"],
+        allowHeaders: ["Authorization", "Content-Type", "X-API-Key"],
         allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     }
 }
@@ -20,6 +20,14 @@ service /api on new http:Listener(8080) {
         if initResult is error {
             log:printError("Failed to initialize database", initResult);
             return initResult;
+        }
+        
+        // Fix existing API keys with incorrect quota dates
+        error? quotaFixResult = fixExistingApiKeyQuotas();
+        if quotaFixResult is error {
+            log:printError("Failed to fix existing API key quotas", quotaFixResult);
+        } else {
+            log:printInfo("Fixed existing API key quotas");
         }
     }
 
@@ -102,8 +110,9 @@ service /api on new http:Listener(8080) {
             "user": toUserResponse(newUser)
         });
         return res;
-    }    
-resource function post auth/login(@http:Payload json payload) returns http:Response {
+    }
+
+    resource function post auth/login(@http:Payload json payload) returns http:Response {
         http:Response res = new;
         
         // Extract input
@@ -247,7 +256,7 @@ resource function post auth/login(@http:Payload json payload) returns http:Respo
             return res;
         }
         
-        string[] rules = payload.rules ?: [];
+        string[] rules = ["full_access"]; // All keys have full access
         
         // Create API key
         [ApiKey, string]|error result = createApiKey(userId, payload.name, payload.description, rules);
@@ -294,6 +303,12 @@ resource function post auth/login(@http:Payload json payload) returns http:Respo
         }
         string userId = userIdResult;
         
+        // Refresh quota status for all API keys before returning data
+        error? refreshResult = refreshAllApiKeyQuotas();
+        if refreshResult is error {
+            log:printError("Failed to refresh API key quotas", refreshResult);
+        }
+        
         // Get user's API keys
         ApiKey[]|error apiKeys = getApiKeysByUserId(userId);
         if apiKeys is error {
@@ -314,8 +329,9 @@ resource function post auth/login(@http:Payload json payload) returns http:Respo
             "maxAllowed": 3
         });
         return res;
-    }  
-  resource function put apikeys/[string keyId]/status(http:Request req, @http:Payload json payload) returns http:Response {
+    }
+
+    resource function put apikeys/[string keyId]/status(http:Request req, @http:Payload json payload) returns http:Response {
         http:Response res = new;
         
         // Validate JWT token and get user
@@ -373,6 +389,70 @@ resource function post auth/login(@http:Payload json payload) returns http:Respo
         }
         
         res.setJsonPayload({"message": "API key status updated successfully"});
+        return res;
+    }
+
+    resource function put apikeys/[string keyId]/rules(http:Request req, @http:Payload UpdateApiKeyRulesRequest payload) returns http:Response {
+        http:Response res = new;
+        
+        // Validate JWT token and get user
+        json|error userPayload = validateTokenFromRequest(req);
+        if userPayload is error {
+            res.statusCode = 401;
+            res.setJsonPayload({"error": "Invalid or expired token"});
+            return res;
+        }
+        
+        string|error userIdResult = extractUserId(userPayload);
+        if userIdResult is error {
+            res.statusCode = 401;
+            res.setJsonPayload({"error": "Invalid token claims"});
+            return res;
+        }
+        string userId = userIdResult;
+        
+        // Verify the API key belongs to the user and is not revoked
+        ApiKey|error apiKey = getApiKeyById(keyId);
+        if apiKey is error {
+            res.statusCode = 404;
+            res.setJsonPayload({"error": "API key not found"});
+            return res;
+        }
+        
+        if apiKey.user_id != userId {
+            res.statusCode = 403;
+            res.setJsonPayload({"error": "Access denied"});
+            return res;
+        }
+        
+        if apiKey.status == "revoked" {
+            res.statusCode = 400;
+            res.setJsonPayload({"error": "Cannot update rules for revoked API key"});
+            return res;
+        }
+        
+        // Update rules
+        error? updateResult = updateApiKeyRules(keyId, userId, payload.rules);
+        if updateResult is error {
+            log:printError("Failed to update API key rules", updateResult);
+            res.statusCode = 500;
+            res.setJsonPayload({"error": "Failed to update API key rules"});
+            return res;
+        }
+        
+        // Get updated API key data
+        ApiKey|error updatedKey = getApiKeyById(keyId);
+        if updatedKey is error {
+            res.statusCode = 500;
+            res.setJsonPayload({"error": "Failed to retrieve updated API key"});
+            return res;
+        }
+        
+        log:printInfo("API key rules updated successfully for key: " + keyId);
+        res.setJsonPayload({
+            "message": "API key rules updated successfully",
+            "apiKey": toApiKeyResponse(updatedKey)
+        });
         return res;
     }
 
@@ -517,5 +597,281 @@ resource function post auth/login(@http:Payload json payload) returns http:Respo
             "status": updatedKey.status
         });
         return res;
+    }
+
+    // ===== PUBLIC API ENDPOINTS (API KEY AUTHENTICATION) =====
+    
+    // Get all users
+    resource function get users(http:Request req) returns http:Response {
+        http:Response res = new;
+        
+        [ApiKey, boolean]|error validation = validateApiKeyFromRequest(req);
+        if validation is error {
+            res.statusCode = 401;
+            res.setJsonPayload({"error": validation.message()});
+            return res;
+        }
+        
+        [ApiKey, boolean] [apiKey, _] = validation;
+        
+        res.setJsonPayload({
+            "users": sampleUsers,
+            "count": sampleUsers.length(),
+            "api_key_used": apiKey.name
+        });
+        return res;
+    }
+    
+    // Get user by ID
+    resource function get users/[string userId](http:Request req) returns http:Response {
+        http:Response res = new;
+        
+        [ApiKey, boolean]|error validation = validateApiKeyFromRequest(req);
+        if validation is error {
+            res.statusCode = 401;
+            res.setJsonPayload({"error": validation.message()});
+            return res;
+        }
+        
+        [ApiKey, boolean] [apiKey, _] = validation;
+        
+        // Find user
+        UserData? foundUser = ();
+        foreach UserData user in sampleUsers {
+            if user.id == userId {
+                foundUser = user;
+                break;
+            }
+        }
+        
+        if foundUser is () {
+            res.statusCode = 404;
+            res.setJsonPayload({"error": "User not found"});
+            return res;
+        }
+        
+        res.setJsonPayload({
+            "user": foundUser,
+            "api_key_used": apiKey.name
+        });
+        return res;
+    }
+    
+    // Get all projects
+    resource function get projects(http:Request req) returns http:Response {
+        http:Response res = new;
+        
+        [ApiKey, boolean]|error validation = validateApiKeyFromRequest(req);
+        if validation is error {
+            res.statusCode = 401;
+            res.setJsonPayload({"error": validation.message()});
+            return res;
+        }
+        
+        [ApiKey, boolean] [apiKey, _] = validation;
+        
+        res.setJsonPayload({
+            "projects": sampleProjects,
+            "count": sampleProjects.length(),
+            "api_key_used": apiKey.name
+        });
+        return res;
+    }
+    
+    // Create new project
+    resource function post projects(http:Request req, @http:Payload json payload) returns http:Response {
+        http:Response res = new;
+        
+        [ApiKey, boolean]|error validation = validateApiKeyFromRequest(req);
+        if validation is error {
+            res.statusCode = 401;
+            res.setJsonPayload({"error": validation.message()});
+            return res;
+        }
+        
+        [ApiKey, boolean] [apiKey, _] = validation;
+        
+        // Validate input
+        json|error nameField = payload.name;
+        json|error descriptionField = payload.description;
+        
+        if nameField is error || descriptionField is error {
+            res.statusCode = 400;
+            res.setJsonPayload({"error": "Missing required fields: name, description"});
+            return res;
+        }
+        
+        string name = nameField.toString();
+        string description = descriptionField.toString();
+        
+        if name.length() < 1 || name.length() > 100 {
+            res.statusCode = 400;
+            res.setJsonPayload({"error": "Project name must be between 1 and 100 characters"});
+            return res;
+        }
+        
+        // Create new project (in real app, this would save to database)
+        string newId = (sampleProjects.length() + 1).toString();
+        ProjectData newProject = {
+            id: newId,
+            name: name,
+            description: description,
+            status: "Planning",
+            created_date: "2024-08-24"
+        };
+        
+        res.statusCode = 201;
+        res.setJsonPayload({
+            "message": "Project created successfully",
+            "project": newProject,
+            "api_key_used": apiKey.name
+        });
+        return res;
+    }
+    
+    // Get analytics data
+    resource function get analytics/summary(http:Request req) returns http:Response {
+        http:Response res = new;
+        
+        [ApiKey, boolean]|error validation = validateApiKeyFromRequest(req);
+        if validation is error {
+            res.statusCode = 401;
+            res.setJsonPayload({"error": validation.message()});
+            return res;
+        }
+        
+        [ApiKey, boolean] [apiKey, _] = validation;
+        
+        // Generate sample analytics data
+        json analyticsData = {
+            "total_users": sampleUsers.length(),
+            "total_projects": sampleProjects.length(),
+            "active_projects": 2,
+            "completed_projects": 1,
+            "departments": {
+                "Engineering": 1,
+                "Marketing": 1,
+                "Sales": 1
+            },
+            "api_key_used": apiKey.name,
+            "generated_at": "2024-08-24T10:30:00Z"
+        };
+        
+        res.setJsonPayload(analyticsData);
+        return res;
+    }
+    
+    // Content moderation endpoint
+    resource function post moderate\-content/text/v1(http:Request req, @http:Payload json payload) returns http:Response {
+        http:Response res = new;
+        
+        [ApiKey, boolean]|error validation = validateApiKeyFromRequest(req);
+        if validation is error {
+            res.statusCode = 401;
+            res.setJsonPayload({"error": validation.message()});
+            return res;
+        }
+        
+        [ApiKey, boolean] [apiKey, _] = validation;
+        
+        // Validate input
+        json|error textField = payload.text;
+        if textField is error {
+            res.statusCode = 400;
+            res.setJsonPayload({"error": "Missing required field: text"});
+            return res;
+        }
+        
+        string text = textField.toString();
+        if text.length() == 0 {
+            res.statusCode = 400;
+            res.setJsonPayload({"error": "Text cannot be empty"});
+            return res;
+        }
+        
+        if text.length() > 10000 {
+            res.statusCode = 400;
+            res.setJsonPayload({"error": "Text cannot exceed 10,000 characters"});
+            return res;
+        }
+        
+        // Simple content moderation logic (in real app, this would use ML models)
+        string[] flaggedWords = ["spam", "hate", "violence", "inappropriate"];
+        boolean flagged = false;
+        string[] detectedIssues = [];
+        
+        string lowerText = text.toLowerAscii();
+        foreach string word in flaggedWords {
+            if lowerText.includes(word) {
+                flagged = true;
+                detectedIssues.push(word);
+            }
+        }
+        
+        // Calculate confidence score (mock)
+        float confidence = flagged ? 0.85 : 0.95;
+        
+        res.setJsonPayload({
+            "status": true,
+            "result": {
+                "flagged": flagged,
+                "confidence": confidence,
+                "categories": flagged ? detectedIssues : [],
+                "severity": flagged ? "medium" : "none",
+                "action_recommended": flagged ? "review" : "approve"
+            },
+            "metadata": {
+                "text_length": text.length(),
+                "processing_time_ms": 45,
+                "model_version": "v1.2.3",
+                "api_key_used": apiKey.name
+            }
+        });
+        return res;
+    }
+    
+    // API documentation endpoint - no authentication required
+    resource function get docs() returns json {
+        return {
+            "api_version": "1.0.0",
+            "description": "User Portal API - Manage users, projects, and analytics",
+            "authentication": "API Key required (X-API-Key header or Authorization: ApiKey <key>)",
+            "endpoints": {
+                "GET /api/users": {
+                    "description": "Get all users",
+                    "response": "Array of user objects"
+                },
+                "GET /api/users/{id}": {
+                    "description": "Get user by ID",
+                    "response": "Single user object"
+                },
+                "GET /api/projects": {
+                    "description": "Get all projects",
+                    "response": "Array of project objects"
+                },
+                "POST /api/projects": {
+                    "description": "Create new project",
+                    "body": {"name": "string", "description": "string"},
+                    "response": "Created project object"
+                },
+                "GET /api/analytics/summary": {
+                    "description": "Get analytics summary",
+                    "response": "Analytics data object"
+                },
+                "POST /api/moderate-content/text/v1": {
+                    "description": "Moderate text content",
+                    "body": {"text": "string"},
+                    "response": "Moderation result object"
+                }
+            },
+            "access_control": {
+                "authentication": "Valid API key required",
+                "permissions": "All API keys have access to all endpoints"
+            },
+            "rate_limits": {
+                "monthly_quota": 100,
+                "quota_reset": "First day of each month"
+            }
+        };
     }
 }

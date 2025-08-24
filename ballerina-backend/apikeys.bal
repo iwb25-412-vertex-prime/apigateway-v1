@@ -29,13 +29,20 @@ public function createApiKey(string userId, string name, string? description, st
     string keyHash = hashApiKey(apiKey);
     string rulesJson = rules.toJsonString();
     
-    // Calculate next month's first day for quota reset (simplified approach)
+    // Calculate next month's first day for quota reset
     time:Utc currentTime = time:utcNow();
     time:Civil currentCivil = time:utcToCivil(currentTime);
     
-    // Simple string-based date calculation for next month
-    int nextYear = currentCivil.month == 12 ? currentCivil.year + 1 : currentCivil.year;
-    int nextMonth = currentCivil.month == 12 ? 1 : currentCivil.month + 1;
+    // Calculate next month correctly
+    int nextYear = currentCivil.year;
+    int nextMonth = currentCivil.month + 1;
+    
+    // Handle year rollover
+    if nextMonth > 12 {
+        nextMonth = 1;
+        nextYear = nextYear + 1;
+    }
+    
     string quotaResetDate = string `${nextYear}-${nextMonth < 10 ? "0" : ""}${nextMonth}-01`;
     
     sql:ExecutionResult result = check dbClient->execute(`
@@ -214,6 +221,20 @@ public function updateApiKeyStatus(string keyId, string status) returns error? {
         SET status = ${status}, updated_at = CURRENT_TIMESTAMP
         WHERE id = ${keyId}
     `);
+}
+
+public function updateApiKeyRules(string keyId, string userId, string[] rules) returns error? {
+    string rulesJson = rules.toJsonString();
+    
+    sql:ExecutionResult result = check dbClient->execute(`
+        UPDATE api_keys 
+        SET rules = ${rulesJson}, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ${keyId} AND user_id = ${userId} AND status != 'revoked'
+    `);
+    
+    if result.affectedRowCount == 0 {
+        return error("API key not found or access denied");
+    }
 }
 
 public function deleteApiKey(string keyId, string userId) returns boolean|error {
