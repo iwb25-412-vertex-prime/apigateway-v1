@@ -45,8 +45,6 @@ export function ApiKeyCard({ apiKey, onUpdateStatus, onDelete }: ApiKeyCardProps
         return 'bg-green-100 text-green-800';
       case 'inactive':
         return 'bg-yellow-100 text-yellow-800';
-      case 'revoked':
-        return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -54,172 +52,129 @@ export function ApiKeyCard({ apiKey, onUpdateStatus, onDelete }: ApiKeyCardProps
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
       month: 'short',
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+      year: 'numeric',
     });
   };
 
+  const usagePercentage = Math.round((apiKey.current_month_usage / apiKey.monthly_quota) * 100);
+  const isQuotaExceeded = apiKey.current_month_usage >= apiKey.monthly_quota;
+
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-2">
-            <h3 className="text-lg font-semibold text-slate-900">{apiKey.name}</h3>
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(apiKey.status)}`}>
-              {apiKey.status.charAt(0).toUpperCase() + apiKey.status.slice(1)}
-            </span>
-          </div>
-          
+    <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className="text-lg font-semibold text-slate-900">{apiKey.name}</h3>
           {apiKey.description && (
-            <p className="text-slate-600 mb-3">{apiKey.description}</p>
+            <p className="text-sm text-slate-600 mt-1">{apiKey.description}</p>
           )}
+        </div>
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(apiKey.status)}`}>
+          {apiKey.status === 'active' ? 'Active' : 'Inactive'}
+        </span>
+      </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            <div>
-              <dt className="text-sm font-medium text-slate-500">Total Usage</dt>
-              <dd className="text-lg font-semibold text-slate-900">{apiKey.usage_count}</dd>
-            </div>
-            <div>
-              <dt className="text-sm font-medium text-slate-500">This Month</dt>
-              <dd className="text-lg font-semibold text-slate-900">
-                {apiKey.current_month_usage} / {apiKey.monthly_quota}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-sm font-medium text-slate-500">Remaining</dt>
-              <dd className={`text-lg font-semibold ${
-                apiKey.remaining_quota <= 10 ? 'text-red-600' : 
-                apiKey.remaining_quota <= 25 ? 'text-orange-600' : 'text-green-600'
-              }`}>
-                {apiKey.remaining_quota}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-sm font-medium text-slate-500">Quota Resets</dt>
-              <dd className="text-sm text-slate-900">{formatDate(apiKey.quota_reset_date)}</dd>
-            </div>
+      {/* Usage Stats */}
+      <div className="mb-4">
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-sm text-slate-600">Monthly Usage</span>
+          <span className="text-sm font-medium text-slate-900">
+            {apiKey.current_month_usage} / {apiKey.monthly_quota} requests
+          </span>
+        </div>
+        
+        <div className="w-full bg-slate-200 rounded-full h-2">
+          <div
+            className={`h-2 rounded-full transition-all duration-300 ${
+              isQuotaExceeded ? 'bg-red-500' :
+              usagePercentage >= 80 ? 'bg-orange-500' :
+              'bg-green-500'
+            }`}
+            style={{ width: `${Math.min(usagePercentage, 100)}%` }}
+          ></div>
+        </div>
+        
+        <div className="flex justify-between items-center mt-2 text-xs text-slate-500">
+          <span>{usagePercentage}% used</span>
+          <span>Resets {formatDate(apiKey.quota_reset_date)}</span>
+        </div>
+
+        {isQuotaExceeded && (
+          <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+            ⚠️ Monthly quota exceeded. API requests will be rejected until quota resets.
           </div>
+        )}
+      </div>
 
-          {/* Quota Progress Bar */}
-          <div className="mb-4">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium text-slate-500">Monthly Quota Usage</span>
-              <span className="text-sm text-slate-600">
-                {Math.round((apiKey.current_month_usage / apiKey.monthly_quota) * 100)}%
-              </span>
-            </div>
-            <div className="w-full bg-slate-200 rounded-full h-2">
-              <div
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  apiKey.current_month_usage >= apiKey.monthly_quota ? 'bg-red-500' :
-                  apiKey.current_month_usage >= apiKey.monthly_quota * 0.8 ? 'bg-orange-500' :
-                  'bg-green-500'
-                }`}
-                style={{
-                  width: `${Math.min((apiKey.current_month_usage / apiKey.monthly_quota) * 100, 100)}%`
-                }}
-              ></div>
-            </div>
-            {apiKey.current_month_usage >= apiKey.monthly_quota && (
-              <p className="text-sm text-red-600 mt-1">
-                ⚠️ Monthly quota exceeded. API requests will be rejected until quota resets.
-              </p>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <dt className="text-sm font-medium text-slate-500">Created</dt>
-              <dd className="text-sm text-slate-900">{formatDate(apiKey.created_at)}</dd>
-            </div>
-            <div>
-              <dt className="text-sm font-medium text-slate-500">Last Updated</dt>
-              <dd className="text-sm text-slate-900">{formatDate(apiKey.updated_at)}</dd>
-            </div>
-          </div>
-
-          {apiKey.rules && apiKey.rules.length > 0 && (
-            <div className="mb-4">
-              <dt className="text-sm font-medium text-slate-500 mb-2">Content Policy Rules</dt>
-              <div className="flex flex-wrap gap-2">
-                {apiKey.rules.map((rule, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800"
-                  >
-                    {rule.replace(/-/g, ' ')}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="mb-4">
-            <dt className="text-sm font-medium text-slate-500 mb-2">API Key</dt>
-            <div className="bg-slate-50 p-3 rounded-lg border-l-4 border-orange-400">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-orange-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-orange-800">
-                    API key is only shown once during creation for security reasons.
-                  </p>
-                  <p className="text-xs text-orange-700 mt-1">
-                    Key ID: <code className="font-mono">{apiKey.id.substring(0, 8)}...</code>
-                  </p>
-                </div>
-              </div>
-            </div>
+      {/* Key Info */}
+      <div className="mb-4 p-3 bg-slate-50 rounded border-l-4 border-orange-400">
+        <div className="flex items-center">
+          <svg className="h-4 w-4 text-orange-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+          </svg>
+          <div>
+            <p className="text-sm text-slate-700">
+              API key is hidden for security. Key ID: <code className="font-mono text-xs">{apiKey.id.substring(0, 8)}...</code>
+            </p>
           </div>
         </div>
       </div>
 
-      <div className="flex items-center justify-between pt-4 border-t border-slate-200">
-        <div className="flex items-center gap-2">
+      {/* Content Rules */}
+      {apiKey.rules && apiKey.rules.length > 0 && (
+        <div className="mb-4">
+          <p className="text-sm font-medium text-slate-600 mb-2">Content Rules:</p>
+          <div className="flex flex-wrap gap-1">
+            {apiKey.rules.slice(0, 3).map((rule, index) => (
+              <span
+                key={index}
+                className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded"
+              >
+                {rule.replace(/-/g, ' ')}
+              </span>
+            ))}
+            {apiKey.rules.length > 3 && (
+              <span className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded">
+                +{apiKey.rules.length - 3} more
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="flex items-center justify-between pt-3 border-t border-slate-200">
+        <div className="text-xs text-slate-500">
+          Created {formatDate(apiKey.created_at)}
+        </div>
+        
+        <div className="flex gap-2">
           {apiKey.status !== 'revoked' && (
             <button
               onClick={handleStatusToggle}
               disabled={isUpdating}
-              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+              className={`px-3 py-1 text-sm rounded transition-colors ${
                 apiKey.status === 'active'
                   ? 'bg-orange-100 text-orange-800 hover:bg-orange-200'
                   : 'bg-green-100 text-green-800 hover:bg-green-200'
               } ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              {isUpdating ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                  Updating...
-                </div>
-              ) : (
-                apiKey.status === 'active' ? 'Disable' : 'Enable'
-              )}
+              {isUpdating ? 'Updating...' : (apiKey.status === 'active' ? 'Disable' : 'Enable')}
             </button>
           )}
+          
+          <button
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className={`px-3 py-1 text-sm bg-red-100 text-red-800 hover:bg-red-200 rounded transition-colors ${
+              isDeleting ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+          >
+            {isDeleting ? 'Deleting...' : 'Delete'}
+          </button>
         </div>
-
-        <button
-          onClick={handleDelete}
-          disabled={isDeleting}
-          className={`px-3 py-1.5 text-sm font-medium rounded-lg bg-red-100 text-red-800 hover:bg-red-200 transition-colors ${
-            isDeleting ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
-        >
-          {isDeleting ? (
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-              Deleting...
-            </div>
-          ) : (
-            'Delete'
-          )}
-        </button>
       </div>
     </div>
   );
