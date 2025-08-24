@@ -13,12 +13,12 @@ export function Navigation() {
   };
 
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200">
+    <nav className="bg-white shadow-sm border-b border-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link href="/" className="flex-shrink-0">
-              <h1 className="text-xl font-bold text-gray-900">ContentGuard API</h1>
+              <h1 className="text-xl font-bold text-slate-900">ContentGuard API</h1>
             </Link>
             
             {isAuthenticated && (
@@ -27,8 +27,8 @@ export function Navigation() {
                   href="/"
                   className={`px-3 py-2 rounded-md text-sm font-medium ${
                     pathname === '/'
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                      ? 'bg-orange-100 text-orange-700'
+                      : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
                   }`}
                 >
                   Dashboard
@@ -37,8 +37,8 @@ export function Navigation() {
                   href="/apikeys"
                   className={`px-3 py-2 rounded-md text-sm font-medium ${
                     pathname === '/apikeys'
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                      ? 'bg-orange-100 text-orange-700'
+                      : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
                   }`}
                 >
                   API Keys
@@ -50,12 +50,12 @@ export function Navigation() {
           <div className="flex items-center">
             {isAuthenticated ? (
               <div className="flex items-center space-x-4">
-                <span className="text-sm text-gray-700">
+                <span className="text-sm text-slate-700">
                   Welcome, {user?.username}
                 </span>
                 <button
                   onClick={handleLogout}
-                  className="bg-red-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-red-700"
+                  className="bg-red-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-red-700 transition-colors duration-200"
                 >
                   Logout
                 </button>
@@ -64,7 +64,7 @@ export function Navigation() {
               <div className="flex items-center space-x-4">
                 <Link
                   href="/auth"
-                  className="bg-blue-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700"
+                  className="bg-orange-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-orange-700 transition-colors duration-200"
                 >
                   Login
                 </Link>

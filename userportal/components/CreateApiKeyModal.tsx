@@ -106,7 +106,7 @@ export function CreateApiKeyModal({
         <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
           <div className="p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">
+              <h2 className="text-xl font-semibold text-slate-900">
                 API Key Created Successfully!
               </h2>
               <button
@@ -278,7 +278,7 @@ export function CreateApiKeyModal({
             <div className="flex justify-end pt-6 border-t border-gray-200 mt-6">
               <button
                 onClick={handleClose}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium transition-colors duration-200"
               >
                 Done
               </button>
@@ -294,7 +294,7 @@ export function CreateApiKeyModal({
       <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit} className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">
+            <h2 className="text-xl font-semibold text-slate-900">
               Create New API Key
             </h2>
             <button
@@ -348,7 +348,7 @@ export function CreateApiKeyModal({
             <div>
               <label
                 htmlFor="name"
-                className="block text-sm font-medium text-gray-700 mb-2"
+                className="block text-sm font-medium text-slate-700 mb-2"
               >
                 API Key Name *
               </label>
@@ -359,12 +359,12 @@ export function CreateApiKeyModal({
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, name: e.target.value }))
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-slate-900"
                 placeholder="e.g., Development Key, Production API, Mobile App"
                 maxLength={100}
                 required
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-slate-500 mt-1">
                 Choose a descriptive name to identify this API key (
                 {formData.name.length}/100)
               </p>
@@ -373,7 +373,7 @@ export function CreateApiKeyModal({
             <div>
               <label
                 htmlFor="description"
-                className="block text-sm font-medium text-gray-700 mb-2"
+                className="block text-sm font-medium text-slate-700 mb-2"
               >
                 Description (Optional)
               </label>
@@ -386,24 +386,24 @@ export function CreateApiKeyModal({
                     description: e.target.value,
                   }))
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-slate-900"
                 rows={3}
                 placeholder="Describe what content policies this API key will enforce..."
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
+              <label className="block text-sm font-medium text-slate-700 mb-3">
                 Content Policy Rules (Optional)
               </label>
-              <p className="text-sm text-gray-500 mb-4">
+              <p className="text-sm text-slate-500 mb-4">
                 Define what content policies this API key should enforce. You
                 can customize these rules later through the API.
               </p>
 
               <div className="space-y-4">
                 <div>
-                  <h4 className="text-sm font-medium text-gray-600 mb-2">
+                  <h4 className="text-sm font-medium text-slate-600 mb-2">
                     Common Content Policies
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -413,9 +413,9 @@ export function CreateApiKeyModal({
                           type="checkbox"
                           checked={formData.rules.includes(rule)}
                           onChange={() => handleRuleToggle(rule)}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          className="rounded border-slate-300 text-orange-600 focus:ring-orange-500"
                         />
-                        <span className="ml-2 text-sm text-gray-700 capitalize">
+                        <span className="ml-2 text-sm text-slate-700 capitalize">
                           {rule.replace(/-/g, " ")}
                         </span>
                       </label>
@@ -514,14 +514,14 @@ export function CreateApiKeyModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium"
+              className="px-4 py-2 text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 font-medium transition-colors duration-200"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting || !formData.name.trim()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
             >
               {isSubmitting ? (
                 <div className="flex items-center gap-2">
