@@ -1,5 +1,6 @@
 // Quota management system for API keys
 import ballerina/time;
+import ballerina/sql;
 
 public function checkQuotaLimit(ApiKey apiKey) returns boolean {
     // For new API keys or if quota reset date is in the future, allow usage
@@ -108,10 +109,7 @@ public function refreshAllApiKeyQuotas() returns error? {
                 if timeDiff >= 0d {
                     // Reset quota for this key
                     error? resetResult = resetMonthlyQuota(row.id);
-                    if resetResult is error {
-                        // Log error but continue with other keys
-                        continue;
-                    }
+                    // If reset fails, just skip this key (no continue needed in from expression)
                 }
             }
         };
