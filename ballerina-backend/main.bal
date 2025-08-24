@@ -303,6 +303,12 @@ service /api on new http:Listener(8080) {
         }
         string userId = userIdResult;
         
+        // Refresh quota status for all API keys before returning data
+        error? refreshResult = refreshAllApiKeyQuotas();
+        if refreshResult is error {
+            log:printError("Failed to refresh API key quotas", refreshResult);
+        }
+        
         // Get user's API keys
         ApiKey[]|error apiKeys = getApiKeysByUserId(userId);
         if apiKeys is error {

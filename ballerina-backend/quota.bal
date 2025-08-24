@@ -83,3 +83,36 @@ public function fixExistingApiKeyQuotas() returns error? {
         WHERE quota_reset_date LIKE '2025%' OR current_month_usage >= monthly_quota
     `);
 }
+
+// Function to refresh quota status for all API keys
+public function refreshAllApiKeyQuotas() returns error? {
+    // Get all active API keys
+    stream<record {|
+        string id;
+        string quota_reset_date;
+        int current_month_usage;
+        int monthly_quota;
+    |}, sql:Error?> resultStream = dbClient->query(`
+        SELECT id, quota_reset_date, current_month_usage, monthly_quota
+        FROM api_keys WHERE status = 'active'
+    `);
+    
+    time:Utc currentTime = time:utcNow();
+    
+    check from var row in resultStream
+        do {
+            // Check if quota needs reset for this key
+            time:Utc|error quotaResetTime = time:utcFromString(row.quota_reset_date + "T00:00:00Z");
+            if quotaResetTime is time:Utc {
+                decimal timeDiff = time:utcDiffSeconds(currentTime, quotaResetTime);
+                if timeDiff >= 0d {
+                    // Reset quota for this key
+                    error? resetResult = resetMonthlyQuota(row.id);
+                    if resetResult is error {
+                        // Log error but continue with other keys
+                        continue;
+                    }
+                }
+            }
+        };
+}
