@@ -33,14 +33,9 @@ Authorization: ApiKey ak_your_api_key_here
 - **Quota Reset:** First day of each month
 - **Quota Exceeded Response:** HTTP 429 with reset date
 
-## Permissions System
+## Access Control
 
-When creating API keys, assign these permissions:
-
-- **`read`** - Access to GET endpoints (users, projects)
-- **`write`** - Access to POST/PUT/DELETE endpoints
-- **`moderate`** - Access to content moderation endpoints
-- **`analytics`** - Access to analytics endpoints
+All API keys have full access to all endpoints. The only limitation is the monthly quota of 100 requests per key.
 
 ---
 
@@ -52,7 +47,7 @@ Analyze text content for inappropriate material, spam, or policy violations.
 
 **Endpoint:** `POST /moderate-content/text/v1`
 
-**Required Permission:** `moderate`
+**Authentication:** API key required
 
 **Headers:**
 ```
@@ -135,7 +130,7 @@ curl -X POST http://localhost:8080/api/moderate-content/text/v1 \
 ### Get All Users
 
 **Endpoint:** `GET /users`  
-**Required Permission:** `read`
+**Authentication:** API key required
 
 **Headers:**
 ```
@@ -162,7 +157,7 @@ X-API-Key: ak_your_api_key_here
 ### Get User by ID
 
 **Endpoint:** `GET /users/{id}`  
-**Required Permission:** `read`
+**Authentication:** API key required
 
 **Example:**
 ```bash
@@ -176,7 +171,7 @@ curl -H "X-API-Key: ak_abc123..." http://localhost:8080/api/users/1
 ### Get All Projects
 
 **Endpoint:** `GET /projects`  
-**Required Permission:** `read`
+**Authentication:** API key required
 
 **Response:**
 ```json
@@ -198,7 +193,7 @@ curl -H "X-API-Key: ak_abc123..." http://localhost:8080/api/users/1
 ### Create New Project
 
 **Endpoint:** `POST /projects`  
-**Required Permission:** `write`
+**Authentication:** API key required
 
 **Request Body:**
 ```json
@@ -226,7 +221,7 @@ curl -X POST http://localhost:8080/api/projects \
 ### Get Analytics Summary
 
 **Endpoint:** `GET /analytics/summary`  
-**Required Permission:** `analytics`
+**Authentication:** API key required
 
 **Response:**
 ```json
@@ -259,7 +254,7 @@ curl -X POST http://localhost:8080/api/projects \
 ### 403 Forbidden
 ```json
 {
-  "error": "API key does not have 'moderate' permission"
+  "error": "Access denied"
 }
 ```
 

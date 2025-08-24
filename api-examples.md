@@ -14,7 +14,7 @@
 
 ## Available Endpoints
 
-### 🛡️ Content Moderation API (requires 'moderate' permission)
+### 🛡️ Content Moderation API
 
 **Moderate text content:**
 ```bash
@@ -49,7 +49,7 @@ curl -X POST http://localhost:8080/api/moderate-content/text/v1 \
 curl http://localhost:8080/api/docs
 ```
 
-### 👥 Users API (requires 'read' permission)
+### 👥 Users API
 
 **Get all users:**
 ```bash
@@ -65,13 +65,13 @@ curl -H "X-API-Key: ak_your_api_key_here" \
 
 ### 📋 Projects API
 
-**Get all projects (requires 'read' permission):**
+**Get all projects:**
 ```bash
 curl -H "X-API-Key: ak_your_api_key_here" \
      http://localhost:8080/api/projects
 ```
 
-**Create new project (requires 'write' permission):**
+**Create new project:**
 ```bash
 curl -X POST \
      -H "X-API-Key: ak_your_api_key_here" \
@@ -80,7 +80,7 @@ curl -X POST \
      http://localhost:8080/api/projects
 ```
 
-### 📊 Analytics API (requires 'analytics' permission)
+### 📊 Analytics API
 
 **Get analytics summary:**
 ```bash
@@ -88,14 +88,9 @@ curl -H "X-API-Key: ak_your_api_key_here" \
      http://localhost:8080/api/analytics/summary
 ```
 
-## Permission System
+## Access Control
 
-When creating API keys, you can assign these permissions:
-
-- **`read`** - Access to GET endpoints (users, projects)
-- **`write`** - Access to POST/PUT/DELETE endpoints  
-- **`moderate`** - Access to content moderation endpoints
-- **`analytics`** - Access to analytics endpoints
+All API keys have full access to all endpoints. The only limitation is the monthly quota of 100 requests per key.
 
 ## Rate Limiting
 

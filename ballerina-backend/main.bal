@@ -256,7 +256,7 @@ service /api on new http:Listener(8080) {
             return res;
         }
         
-        string[] rules = payload.rules ?: [];
+        string[] rules = ["full_access"]; // All keys have full access
         
         // Create API key
         [ApiKey, string]|error result = createApiKey(userId, payload.name, payload.description, rules);
@@ -595,7 +595,7 @@ service /api on new http:Listener(8080) {
 
     // ===== PUBLIC API ENDPOINTS (API KEY AUTHENTICATION) =====
     
-    // Get all users - requires 'read' permission
+    // Get all users
     resource function get users(http:Request req) returns http:Response {
         http:Response res = new;
         
@@ -608,14 +608,6 @@ service /api on new http:Listener(8080) {
         
         [ApiKey, boolean] [apiKey, _] = validation;
         
-        // Check if API key has 'read' permission
-        int? readIndex = apiKey.rules.indexOf("read");
-        if readIndex is () {
-            res.statusCode = 403;
-            res.setJsonPayload({"error": "API key does not have 'read' permission"});
-            return res;
-        }
-        
         res.setJsonPayload({
             "users": sampleUsers,
             "count": sampleUsers.length(),
@@ -624,7 +616,7 @@ service /api on new http:Listener(8080) {
         return res;
     }
     
-    // Get user by ID - requires 'read' permission
+    // Get user by ID
     resource function get users/[string userId](http:Request req) returns http:Response {
         http:Response res = new;
         
@@ -636,14 +628,6 @@ service /api on new http:Listener(8080) {
         }
         
         [ApiKey, boolean] [apiKey, _] = validation;
-        
-        // Check permissions
-        int? readIndex = apiKey.rules.indexOf("read");
-        if readIndex is () {
-            res.statusCode = 403;
-            res.setJsonPayload({"error": "API key does not have 'read' permission"});
-            return res;
-        }
         
         // Find user
         UserData? foundUser = ();
@@ -667,7 +651,7 @@ service /api on new http:Listener(8080) {
         return res;
     }
     
-    // Get all projects - requires 'read' permission
+    // Get all projects
     resource function get projects(http:Request req) returns http:Response {
         http:Response res = new;
         
@@ -680,14 +664,6 @@ service /api on new http:Listener(8080) {
         
         [ApiKey, boolean] [apiKey, _] = validation;
         
-        // Check permissions
-        int? readIndex = apiKey.rules.indexOf("read");
-        if readIndex is () {
-            res.statusCode = 403;
-            res.setJsonPayload({"error": "API key does not have 'read' permission"});
-            return res;
-        }
-        
         res.setJsonPayload({
             "projects": sampleProjects,
             "count": sampleProjects.length(),
@@ -696,7 +672,7 @@ service /api on new http:Listener(8080) {
         return res;
     }
     
-    // Create new project - requires 'write' permission
+    // Create new project
     resource function post projects(http:Request req, @http:Payload json payload) returns http:Response {
         http:Response res = new;
         
@@ -708,14 +684,6 @@ service /api on new http:Listener(8080) {
         }
         
         [ApiKey, boolean] [apiKey, _] = validation;
-        
-        // Check permissions
-        int? writeIndex = apiKey.rules.indexOf("write");
-        if writeIndex is () {
-            res.statusCode = 403;
-            res.setJsonPayload({"error": "API key does not have 'write' permission"});
-            return res;
-        }
         
         // Validate input
         json|error nameField = payload.name;
@@ -755,7 +723,7 @@ service /api on new http:Listener(8080) {
         return res;
     }
     
-    // Get analytics data - requires 'analytics' permission
+    // Get analytics data
     resource function get analytics/summary(http:Request req) returns http:Response {
         http:Response res = new;
         
@@ -767,14 +735,6 @@ service /api on new http:Listener(8080) {
         }
         
         [ApiKey, boolean] [apiKey, _] = validation;
-        
-        // Check permissions
-        int? analyticsIndex = apiKey.rules.indexOf("analytics");
-        if analyticsIndex is () {
-            res.statusCode = 403;
-            res.setJsonPayload({"error": "API key does not have 'analytics' permission"});
-            return res;
-        }
         
         // Generate sample analytics data
         json analyticsData = {
@@ -795,7 +755,7 @@ service /api on new http:Listener(8080) {
         return res;
     }
     
-    // Content moderation endpoint - requires 'moderate' permission
+    // Content moderation endpoint
     resource function post moderate\-content/text/v1(http:Request req, @http:Payload json payload) returns http:Response {
         http:Response res = new;
         
@@ -807,14 +767,6 @@ service /api on new http:Listener(8080) {
         }
         
         [ApiKey, boolean] [apiKey, _] = validation;
-        
-        // Check permissions
-        int? moderateIndex = apiKey.rules.indexOf("moderate");
-        if moderateIndex is () {
-            res.statusCode = 403;
-            res.setJsonPayload({"error": "API key does not have 'moderate' permission"});
-            return res;
-        }
         
         // Validate input
         json|error textField = payload.text;
@@ -881,42 +833,34 @@ service /api on new http:Listener(8080) {
             "endpoints": {
                 "GET /api/users": {
                     "description": "Get all users",
-                    "permissions": ["read"],
                     "response": "Array of user objects"
                 },
                 "GET /api/users/{id}": {
                     "description": "Get user by ID",
-                    "permissions": ["read"],
                     "response": "Single user object"
                 },
                 "GET /api/projects": {
                     "description": "Get all projects",
-                    "permissions": ["read"],
                     "response": "Array of project objects"
                 },
                 "POST /api/projects": {
                     "description": "Create new project",
-                    "permissions": ["write"],
                     "body": {"name": "string", "description": "string"},
                     "response": "Created project object"
                 },
                 "GET /api/analytics/summary": {
                     "description": "Get analytics summary",
-                    "permissions": ["analytics"],
                     "response": "Analytics data object"
                 },
                 "POST /api/moderate-content/text/v1": {
                     "description": "Moderate text content",
-                    "permissions": ["moderate"],
                     "body": {"text": "string"},
                     "response": "Moderation result object"
                 }
             },
-            "permissions": {
-                "read": "Access to GET endpoints for users and projects",
-                "write": "Access to POST/PUT/DELETE endpoints",
-                "moderate": "Access to content moderation endpoints",
-                "analytics": "Access to analytics endpoints"
+            "access_control": {
+                "authentication": "Valid API key required",
+                "permissions": "All API keys have access to all endpoints"
             },
             "rate_limits": {
                 "monthly_quota": 100,
