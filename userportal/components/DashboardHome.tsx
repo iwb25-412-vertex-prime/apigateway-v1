@@ -66,18 +66,20 @@ export function DashboardHome() {
         </svg>
       ),
       color: 'bg-orange-500 hover:bg-orange-600',
+      buttonText: 'Get Started', // Added button text
     },
     {
       title: 'View Documentation',
       description: 'Learn how to integrate Moderato API',
-      href: '#',
+      href: '/docs',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
       ),
       color: 'bg-slate-500 hover:bg-slate-600',
-      disabled: true,
+      disabled: false,
+      buttonText: 'View Doc', // Changed button text here
     },
     {
       title: 'API Testing',
@@ -188,7 +190,7 @@ export function DashboardHome() {
                   <h3 className="text-lg font-semibold text-slate-900 mb-2">{action.title}</h3>
                   <p className="text-slate-600 mb-4">{action.description}</p>
                   <div className="flex items-center text-orange-600 font-medium">
-                    Get Started
+                    {action.buttonText} {/* Using the dynamic button text */}
                     <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>

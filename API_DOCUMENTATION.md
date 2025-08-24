@@ -2,9 +2,10 @@
 
 ## Overview
 
-The User Portal API provides endpoints for content moderation, user management, project management, and analytics. All endpoints require API key authentication and respect permission-based access control.
+The Content Policy Platform API enables developers to integrate powerful content moderation, user management, and analytics capabilities into their applications. Our API is designed to be simple, reliable, and scalable.
 
 **Base URL:** `http://localhost:8080/api`
+**Web Documentation:** `http://localhost:3000/docs`
 
 ## Authentication
 
