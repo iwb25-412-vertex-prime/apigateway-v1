@@ -65,17 +65,17 @@ export function Sidebar({ onToggle }: SidebarProps) {
   ];
 
   return (
-    <div className={`bg-white border-r border-gray-200 transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'} flex flex-col min-h-screen fixed left-0 top-0 z-30`}>
+    <div className={`bg-slate-800 border-r border-slate-700 transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'} flex flex-col fixed left-0 top-0 h-screen z-30 shadow-2xl overflow-hidden`}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+      <div className="flex items-center justify-between p-4 border-b border-slate-700">
         {!isCollapsed && (
           <Link href="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center shadow-lg">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
             </div>
-            <span className="text-lg font-bold text-gray-900">Modarato</span>
+            <span className="text-lg font-bold text-white">Modarato</span>
           </Link>
         )}
         <button
@@ -84,16 +84,16 @@ export function Sidebar({ onToggle }: SidebarProps) {
             setIsCollapsed(newCollapsed);
             onToggle?.(newCollapsed);
           }}
-          className={`rounded-lg hover:bg-gray-100 transition-colors ${isCollapsed ? 'p-2' : 'p-1.5'}`}
+          className={`rounded-lg hover:bg-slate-700 transition-colors ${isCollapsed ? 'p-2' : 'p-1.5'}`}
         >
-          <svg className={`text-gray-500 ${isCollapsed ? 'w-6 h-6' : 'w-5 h-5'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className={`text-slate-400 hover:text-slate-200 ${isCollapsed ? 'w-6 h-6' : 'w-5 h-5'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isCollapsed ? "M9 5l7 7-7 7" : "M15 19l-7-7 7-7"} />
           </svg>
         </button>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2">
+      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
         {navigation.map((item) => {
           const isActive = pathname === item.href;
           const isDisabled = item.disabled;
@@ -102,7 +102,7 @@ export function Sidebar({ onToggle }: SidebarProps) {
             return (
               <div
                 key={item.name}
-                className={`flex items-center space-x-3 rounded-lg text-gray-400 cursor-not-allowed ${
+                className={`flex items-center space-x-3 rounded-lg text-slate-500 cursor-not-allowed ${
                   isCollapsed ? 'justify-center px-2 py-3' : 'px-3 py-2'
                 }`}
                 title={isCollapsed ? item.name : ''}
@@ -111,7 +111,7 @@ export function Sidebar({ onToggle }: SidebarProps) {
                   {item.icon}
                 </div>
                 {!isCollapsed && <span className="text-sm font-medium">{item.name}</span>}
-                {!isCollapsed && <span className="text-xs text-gray-300 ml-auto">Soon</span>}
+                {!isCollapsed && <span className="text-xs text-slate-600 ml-auto">Soon</span>}
               </div>
             );
           }
@@ -120,12 +120,12 @@ export function Sidebar({ onToggle }: SidebarProps) {
             <Link
               key={item.name}
               href={item.href}
-              className={`flex items-center space-x-3 rounded-lg transition-colors ${
+              className={`flex items-center space-x-3 rounded-lg transition-colors duration-200 ${
                 isCollapsed ? 'justify-center px-2 py-3' : 'px-3 py-2'
               } ${
                 isActive
-                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  ? 'bg-orange-600 text-white shadow-lg'
+                  : 'text-slate-300 hover:bg-slate-700 hover:text-white'
               }`}
               title={isCollapsed ? item.name : ''}
             >
@@ -139,23 +139,23 @@ export function Sidebar({ onToggle }: SidebarProps) {
       </nav>
 
       {/* User Profile & Logout */}
-      <div className="border-t border-gray-200 p-4">
+      <div className="border-t border-slate-700 p-4">
         {!isCollapsed && (
           <div className="flex items-center space-x-3 mb-3">
-            <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-              <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-8 h-8 bg-gradient-to-br from-slate-600 to-slate-700 rounded-full flex items-center justify-center ring-2 ring-slate-600">
+              <svg className="w-4 h-4 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">{user?.username}</p>
-              <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+              <p className="text-sm font-medium text-white truncate">{user?.username}</p>
+              <p className="text-xs text-slate-400 truncate">{user?.email}</p>
             </div>
           </div>
         )}
         <button
           onClick={handleLogout}
-          className={`w-full flex items-center space-x-3 rounded-lg text-red-600 hover:bg-red-50 transition-colors ${
+          className={`w-full flex items-center space-x-3 rounded-lg text-red-400 hover:bg-red-900/20 hover:text-red-300 transition-colors duration-200 ${
             isCollapsed ? 'justify-center px-2 py-3' : 'px-3 py-2'
           }`}
           title={isCollapsed ? 'Logout' : ''}

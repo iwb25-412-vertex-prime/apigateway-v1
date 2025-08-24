@@ -40,20 +40,20 @@ export default function LoginForm() {
     <div className="w-full max-w-md mx-auto">
       <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl p-8 shadow-2xl">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full mb-4 shadow-lg">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full mb-4 shadow-lg">
             <UserIcon className="w-8 h-8 text-white" />
           </div>
-          <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
             Welcome Back
           </h2>
-          <p className="text-gray-600 mt-2">Sign in to your account</p>
+          <p className="text-slate-600 mt-2">Sign in to your account</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-1">
             <label
               htmlFor="username"
-              className="block text-sm font-semibold text-gray-700 mb-2"
+              className="block text-sm font-semibold text-slate-700 mb-2"
             >
               Username
             </label>
@@ -62,8 +62,8 @@ export default function LoginForm() {
                 <UserIcon
                   className={`h-5 w-5 transition-colors duration-200 ${
                     focusedField === "username"
-                      ? "text-blue-500"
-                      : "text-gray-400"
+                      ? "text-orange-500"
+                      : "text-slate-400"
                   }`}
                 />
               </div>
@@ -76,7 +76,7 @@ export default function LoginForm() {
                 onFocus={() => setFocusedField("username")}
                 onBlur={() => setFocusedField(null)}
                 required
-                className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl bg-white/50 backdrop-blur-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:bg-white/70"
+                className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl bg-white/50 backdrop-blur-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 hover:bg-white/70"
                 placeholder="Enter your username"
               />
             </div>
@@ -85,7 +85,7 @@ export default function LoginForm() {
           <div className="space-y-1">
             <label
               htmlFor="password"
-              className="block text-sm font-semibold text-gray-700 mb-2"
+              className="block text-sm font-semibold text-slate-700 mb-2"
             >
               Password
             </label>
@@ -94,8 +94,8 @@ export default function LoginForm() {
                 <LockClosedIcon
                   className={`h-5 w-5 transition-colors duration-200 ${
                     focusedField === "password"
-                      ? "text-blue-500"
-                      : "text-gray-400"
+                      ? "text-orange-500"
+                      : "text-slate-400"
                   }`}
                 />
               </div>
@@ -108,13 +108,13 @@ export default function LoginForm() {
                 onFocus={() => setFocusedField("password")}
                 onBlur={() => setFocusedField(null)}
                 required
-                className="block w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl bg-white/50 backdrop-blur-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:bg-white/70"
+                className="block w-full pl-10 pr-12 py-3 border border-slate-200 rounded-xl bg-white/50 backdrop-blur-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 hover:bg-white/70"
                 placeholder="Enter your password"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors duration-200"
               >
                 {showPassword ? (
                   <EyeSlashIcon className="h-5 w-5" />
@@ -151,7 +151,7 @@ export default function LoginForm() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full relative overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none group"
+            className="w-full relative overflow-hidden bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none group"
           >
             <span className="relative z-10 flex items-center justify-center">
               {loading ? (
@@ -182,13 +182,13 @@ export default function LoginForm() {
                 "Sign In"
               )}
             </span>
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-700 to-purple-700 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-orange-600 to-orange-700 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
           </button>
 
           <div className="text-center">
             <a
               href="#"
-              className="text-sm text-gray-600 hover:text-blue-600 transition-colors duration-200"
+              className="text-sm text-slate-600 hover:text-orange-600 transition-colors duration-200"
             >
               Forgot your password?
             </a>

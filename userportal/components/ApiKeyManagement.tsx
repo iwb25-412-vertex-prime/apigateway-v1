@@ -99,10 +99,10 @@ export function ApiKeyManagement() {
       <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-3xl font-bold text-slate-900">
               API Key Management
             </h1>
-            <p className="text-gray-600 mt-2">
+            <p className="text-slate-600 mt-2">
               Create and manage API keys for your content policy enforcement
               platform. Each key has 100 free requests per month. Maximum 3
               active keys allowed.
@@ -111,10 +111,10 @@ export function ApiKeyManagement() {
           <button
             onClick={() => setShowCreateModal(true)}
             disabled={!canCreateMore}
-            className={`px-4 py-2 rounded-lg font-medium ${
+            className={`px-4 py-2 rounded-lg font-medium transition-colors duration-200 ${
               canCreateMore
-                ? "bg-blue-600 text-white hover:bg-blue-700"
-                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                ? "bg-orange-600 text-white hover:bg-orange-700"
+                : "bg-slate-300 text-slate-500 cursor-not-allowed"
             }`}
           >
             Create API Key
@@ -123,32 +123,32 @@ export function ApiKeyManagement() {
 
         {/* API Key Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white p-4 rounded-lg border">
-            <div className="text-2xl font-bold text-blue-600">
+          <div className="bg-white p-4 rounded-lg border border-slate-200 hover:shadow-md transition-shadow duration-200">
+            <div className="text-2xl font-bold text-orange-600">
               {activeKeys.length}
             </div>
-            <div className="text-sm text-gray-600">Active Keys</div>
+            <div className="text-sm text-slate-600">Active Keys</div>
           </div>
-          <div className="bg-white p-4 rounded-lg border">
+          <div className="bg-white p-4 rounded-lg border border-slate-200 hover:shadow-md transition-shadow duration-200">
             <div className="text-2xl font-bold text-green-600">
               {activeKeys.filter((key) => key.status === "active").length}
             </div>
-            <div className="text-sm text-gray-600">Enabled Keys</div>
+            <div className="text-sm text-slate-600">Enabled Keys</div>
           </div>
-          <div className="bg-white p-4 rounded-lg border">
-            <div className="text-2xl font-bold text-orange-600">
+          <div className="bg-white p-4 rounded-lg border border-slate-200 hover:shadow-md transition-shadow duration-200">
+            <div className="text-2xl font-bold text-slate-600">
               {activeKeys.reduce((sum, key) => sum + key.usage_count, 0)}
             </div>
-            <div className="text-sm text-gray-600">Total Usage</div>
+            <div className="text-sm text-slate-600">Total Usage</div>
           </div>
-          <div className="bg-white p-4 rounded-lg border">
-            <div className="text-2xl font-bold text-purple-600">
+          <div className="bg-white p-4 rounded-lg border border-slate-200 hover:shadow-md transition-shadow duration-200">
+            <div className="text-2xl font-bold text-slate-700">
               {activeKeys.reduce(
                 (sum, key) => sum + key.current_month_usage,
                 0
               )}
             </div>
-            <div className="text-sm text-gray-600">This Month</div>
+            <div className="text-sm text-slate-600">This Month</div>
           </div>
         </div>
 
@@ -297,16 +297,16 @@ export function ApiKeyManagement() {
       {/* Loading State */}
       {loading ? (
         <div className="text-center py-8">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="mt-2 text-gray-600">Loading API keys...</p>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div>
+          <p className="mt-2 text-slate-600">Loading API keys...</p>
         </div>
       ) : (
         <>
           {/* API Keys List */}
           {activeKeys.length === 0 ? (
-            <div className="text-center py-12 bg-gray-50 rounded-lg">
+            <div className="text-center py-12 bg-slate-50 rounded-lg">
               <svg
-                className="mx-auto h-12 w-12 text-gray-400"
+                className="mx-auto h-12 w-12 text-slate-400"
                 stroke="currentColor"
                 fill="none"
                 viewBox="0 0 48 48"
@@ -318,17 +318,17 @@ export function ApiKeyManagement() {
                   strokeLinejoin="round"
                 />
               </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">
+              <h3 className="mt-2 text-sm font-medium text-slate-900">
                 No API keys
               </h3>
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-slate-500">
                 Get started by creating your first API key.
               </p>
               {canCreateMore && (
                 <div className="mt-6">
                   <button
                     onClick={() => setShowCreateModal(true)}
-                    className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                    className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-orange-600 hover:bg-orange-700 transition-colors duration-200"
                   >
                     Create API Key
                   </button>

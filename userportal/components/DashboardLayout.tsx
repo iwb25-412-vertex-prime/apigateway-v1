@@ -15,10 +15,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-orange-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="mt-2 text-gray-600">Loading...</p>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div>
+          <p className="mt-2 text-slate-600">Loading...</p>
         </div>
       </div>
     );
@@ -26,7 +26,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-orange-50">
         <Navigation />
         {children}
       </div>
@@ -34,10 +34,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-orange-50">
       <Sidebar onToggle={setSidebarCollapsed} />
       <main className={`transition-all duration-300 min-h-screen ${sidebarCollapsed ? 'ml-16' : 'ml-64'}`}>
-        {children}
+        <div className="h-full">
+          {children}
+        </div>
       </main>
     </div>
   );

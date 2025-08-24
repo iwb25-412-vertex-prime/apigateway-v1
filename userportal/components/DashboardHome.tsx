@@ -65,7 +65,7 @@ export function DashboardHome() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
         </svg>
       ),
-      color: 'bg-blue-500 hover:bg-blue-600',
+      color: 'bg-orange-500 hover:bg-orange-600',
     },
     {
       title: 'View Documentation',
@@ -76,7 +76,7 @@ export function DashboardHome() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
       ),
-      color: 'bg-green-500 hover:bg-green-600',
+      color: 'bg-slate-500 hover:bg-slate-600',
       disabled: true,
     },
     {
@@ -88,7 +88,7 @@ export function DashboardHome() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
         </svg>
       ),
-      color: 'bg-purple-500 hover:bg-purple-600',
+      color: 'bg-slate-600 hover:bg-slate-700',
       disabled: true,
     },
   ];
@@ -102,7 +102,7 @@ export function DashboardHome() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
         </svg>
       ),
-      color: 'text-blue-600 bg-blue-100',
+      color: 'text-orange-600 bg-orange-100',
     },
     {
       title: 'Active Keys',
@@ -122,7 +122,7 @@ export function DashboardHome() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
         </svg>
       ),
-      color: 'text-purple-600 bg-purple-100',
+      color: 'text-slate-600 bg-slate-100',
     },
     {
       title: 'This Month',
@@ -140,10 +140,10 @@ export function DashboardHome() {
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <h1 className="text-3xl font-bold text-slate-900 mb-2">
           Welcome back, {user?.username}!
         </h1>
-        <p className="text-gray-600">
+        <p className="text-slate-600">
           Manage your content policies and API keys from your dashboard
         </p>
       </div>
@@ -151,11 +151,11 @@ export function DashboardHome() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {statCards.map((stat, index) => (
-          <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div key={index} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">{stat.title}</p>
-                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                <p className="text-sm font-medium text-slate-600 mb-1">{stat.title}</p>
+                <p className="text-2xl font-bold text-slate-900">{stat.value}</p>
               </div>
               <div className={`p-3 rounded-lg ${stat.color}`}>
                 {stat.icon}
@@ -167,27 +167,27 @@ export function DashboardHome() {
 
       {/* Quick Actions */}
       <div className="mb-8">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
+        <h2 className="text-xl font-semibold text-slate-900 mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {quickActions.map((action, index) => (
-            <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div key={index} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow duration-200">
               {action.disabled ? (
                 <div className="p-6 cursor-not-allowed opacity-60">
                   <div className={`inline-flex items-center justify-center w-12 h-12 rounded-lg text-white mb-4 ${action.color.split(' ')[0]} opacity-50`}>
                     {action.icon}
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{action.title}</h3>
-                  <p className="text-gray-600 mb-4">{action.description}</p>
-                  <span className="text-sm text-gray-400">Coming Soon</span>
+                  <h3 className="text-lg font-semibold text-slate-900 mb-2">{action.title}</h3>
+                  <p className="text-slate-600 mb-4">{action.description}</p>
+                  <span className="text-sm text-slate-400">Coming Soon</span>
                 </div>
               ) : (
-                <Link href={action.href} className="block p-6 hover:bg-gray-50 transition-colors">
+                <Link href={action.href} className="block p-6 hover:bg-slate-50 transition-colors">
                   <div className={`inline-flex items-center justify-center w-12 h-12 rounded-lg text-white mb-4 ${action.color}`}>
                     {action.icon}
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{action.title}</h3>
-                  <p className="text-gray-600 mb-4">{action.description}</p>
-                  <div className="flex items-center text-blue-600 font-medium">
+                  <h3 className="text-lg font-semibold text-slate-900 mb-2">{action.title}</h3>
+                  <p className="text-slate-600 mb-4">{action.description}</p>
+                  <div className="flex items-center text-orange-600 font-medium">
                     Get Started
                     <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -201,14 +201,14 @@ export function DashboardHome() {
       </div>
 
       {/* Recent Activity */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Recent Activity</h2>
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow duration-200">
+        <h2 className="text-xl font-semibold text-slate-900 mb-4">Recent Activity</h2>
         <div className="text-center py-8">
-          <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-12 h-12 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
           </svg>
-          <p className="text-gray-500">No recent activity to display</p>
-          <p className="text-sm text-gray-400 mt-1">Activity will appear here as you use your API keys</p>
+          <p className="text-slate-500">No recent activity to display</p>
+          <p className="text-sm text-slate-400 mt-1">Activity will appear here as you use your API keys</p>
         </div>
       </div>
     </div>

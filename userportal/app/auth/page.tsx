@@ -13,12 +13,12 @@ export default function AuthPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-orange-50">
         <Navigation />
         <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
           <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 shadow-lg"></div>
-            <p className="mt-4 text-gray-600 font-medium">Loading...</p>
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-orange-200 border-t-orange-600 shadow-lg"></div>
+            <p className="mt-4 text-slate-600 font-medium">Loading...</p>
           </div>
         </div>
       </div>
@@ -27,7 +27,7 @@ export default function AuthPage() {
 
   if (isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-orange-50">
         <Navigation />
         <div className="py-12">
           <UserProfile />
@@ -37,12 +37,12 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-orange-50 relative overflow-hidden">
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-green-400/20 to-blue-400/20 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-purple-400/10 to-pink-400/10 rounded-full blur-3xl"></div>
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-orange-400/20 to-slate-400/20 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-slate-400/20 to-orange-400/20 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-slate-400/10 to-orange-400/10 rounded-full blur-3xl"></div>
       </div>
 
       <Navigation />
@@ -61,8 +61,8 @@ export default function AuthPage() {
                 onClick={() => setActiveTab('login')}
                 className={`relative z-10 flex-1 py-3 px-6 text-center font-semibold rounded-xl transition-all duration-300 ${
                   activeTab === 'login'
-                    ? 'text-gray-900'
-                    : 'text-gray-600 hover:text-gray-800'
+                    ? 'text-slate-900'
+                    : 'text-slate-600 hover:text-slate-800'
                 }`}
               >
                 Sign In
@@ -71,8 +71,8 @@ export default function AuthPage() {
                 onClick={() => setActiveTab('register')}
                 className={`relative z-10 flex-1 py-3 px-6 text-center font-semibold rounded-xl transition-all duration-300 ${
                   activeTab === 'register'
-                    ? 'text-gray-900'
-                    : 'text-gray-600 hover:text-gray-800'
+                    ? 'text-slate-900'
+                    : 'text-slate-600 hover:text-slate-800'
                 }`}
               >
                 Sign Up
@@ -96,13 +96,13 @@ export default function AuthPage() {
 
           {/* Footer */}
           <div className="text-center mt-8">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-slate-600">
               By continuing, you agree to our{' '}
-              <a href="#" className="text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200">
+              <a href="#" className="text-orange-600 hover:text-orange-700 font-medium transition-colors duration-200">
                 Terms of Service
               </a>{' '}
               and{' '}
-              <a href="#" className="text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200">
+              <a href="#" className="text-orange-600 hover:text-orange-700 font-medium transition-colors duration-200">
                 Privacy Policy
               </a>
             </p>

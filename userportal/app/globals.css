@@ -56,10 +56,10 @@ body {
 
 @keyframes pulse-glow {
   0%, 100% {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 0 20px rgba(255, 153, 0, 0.3);
   }
   50% {
-    box-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 30px rgba(255, 153, 0, 0.5);
   }
 }
 
@@ -105,7 +105,7 @@ html {
 
 /* Focus styles for better accessibility */
 .focus-ring {
-  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+  @apply focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2;
 }
 
 /* Glass morphism utility */
@@ -118,8 +118,20 @@ html {
 
 /* Gradient text utility */
 .gradient-text {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #FF9900 0%, #232F3E 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* AWS Color Variables */
+:root {
+  --aws-orange: #FF9900;
+  --aws-dark-blue: #232F3E;
+  --aws-light-blue: #4B9CD3;
+  --aws-gray-light: #FAFAFA;
+  --aws-gray-medium: #F2F3F3;
+  --aws-gray-dark: #879196;
+  --aws-success: #1B660F;
+  --aws-error: #D13212;
 }
