@@ -35,8 +35,6 @@ export function DashboardHome() {
 
   // Fetch API key statistics
   const fetchStats = async (isManualRefresh = false) => {
-    console.log("fetchStats called, isManualRefresh:", isManualRefresh);
-    
     // Set appropriate loading state
     if (isManualRefresh) {
       setDashboardState((prev) => ({ ...prev, refreshing: true }));
@@ -47,11 +45,8 @@ export function DashboardHome() {
 
     try {
       const token = AuthService.getToken();
-      console.log("Token exists:", !!token);
-      console.log("Is authenticated:", AuthService.isAuthenticated());
       
       if (!token || !AuthService.isAuthenticated()) {
-        console.log("No valid token found, clearing loading states");
         setDashboardState((prev) => ({ 
           ...prev, 
           loading: false, 
@@ -60,38 +55,24 @@ export function DashboardHome() {
         return;
       }
 
-      console.log("Making API request to /api/apikeys");
       const response = await AuthService.authenticatedFetch("http://localhost:8080/api/apikeys");
-
-      console.log("API response status:", response.status);
 
       if (response.ok) {
         const data = await response.json();
-        console.log("API response data:", data);
-        
         const apiKeys = data.apiKeys || [];
-        console.log("API keys array:", apiKeys);
 
         const totalKeys = apiKeys.length;
         const activeKeys = apiKeys.filter(
           (key: any) => key.status === "active"
         ).length;
         const totalUsage = apiKeys.reduce(
-          (sum: number, key: any) => {
-            console.log(`Adding usage_count: ${key.usage_count} to sum: ${sum}`);
-            return sum + (key.usage_count || 0);
-          },
+          (sum: number, key: any) => sum + (key.usage_count || 0),
           0
         );
         const monthlyUsage = apiKeys.reduce(
-          (sum: number, key: any) => {
-            console.log(`Adding current_month_usage: ${key.current_month_usage} to sum: ${sum}`);
-            return sum + (key.current_month_usage || 0);
-          },
+          (sum: number, key: any) => sum + (key.current_month_usage || 0),
           0
         );
-
-        console.log("Calculated stats:", { totalKeys, activeKeys, totalUsage, monthlyUsage });
 
         setDashboardState({
           stats: {
@@ -105,8 +86,7 @@ export function DashboardHome() {
           lastUpdated: new Date(),
         });
       } else {
-        const errorText = await response.text();
-        console.error("API request failed:", response.status, response.statusText, errorText);
+        console.error("Failed to fetch API keys:", response.status, response.statusText);
         setDashboardState((prev) => ({ 
           ...prev, 
           loading: false, 

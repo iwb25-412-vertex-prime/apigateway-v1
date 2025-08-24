@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CodeBlock } from "./CodeBlock";
+import { CodeBlock } from "@/components/CodeBlock";
 
 interface Endpoint {
   method: string;
