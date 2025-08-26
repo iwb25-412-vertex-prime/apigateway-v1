@@ -18,7 +18,7 @@ export function Navigation() {
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link href="/" className="flex-shrink-0">
-              <h1 className="text-xl font-bold text-slate-900">ContentGuard API</h1>
+              <h1 className="text-xl font-bold text-slate-900">Moderato</h1>
             </Link>
             
             {isAuthenticated && (
