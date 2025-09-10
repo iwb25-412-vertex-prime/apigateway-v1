@@ -306,7 +306,7 @@ export default function RegisterForm() {
                   </div>
                 ) : (
                   <span className="text-xs text-red-600">
-                    Passwords don't match
+                    Passwords don&apos;t match
                   </span>
                 )}
               </div>

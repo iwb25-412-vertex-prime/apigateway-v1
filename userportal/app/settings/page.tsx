@@ -43,7 +43,7 @@ export default function SettingsPage() {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       setMessage({ type: "success", text: "Profile updated successfully!" });
-    } catch (error) {
+    } catch {
       setMessage({ type: "error", text: "Failed to update profile. Please try again." });
     } finally {
       setIsLoading(false);
@@ -54,7 +54,7 @@ export default function SettingsPage() {
     e.preventDefault();
     
     if (profileData.newPassword !== profileData.confirmPassword) {
-      setMessage({ type: "error", text: "New passwords don't match." });
+      setMessage({ type: "error", text: "New passwords don&apos;t match." });
       return;
     }
 
@@ -66,7 +66,7 @@ export default function SettingsPage() {
       await new Promise(resolve => setTimeout(resolve, 1000));
       setMessage({ type: "success", text: "Password changed successfully!" });
       setProfileData(prev => ({ ...prev, currentPassword: "", newPassword: "", confirmPassword: "" }));
-    } catch (error) {
+    } catch {
       setMessage({ type: "error", text: "Failed to change password. Please try again." });
     } finally {
       setIsLoading(false);
@@ -82,7 +82,7 @@ export default function SettingsPage() {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       setMessage({ type: "success", text: "Preferences updated successfully!" });
-    } catch (error) {
+    } catch {
       setMessage({ type: "error", text: "Failed to update preferences. Please try again." });
     } finally {
       setIsLoading(false);

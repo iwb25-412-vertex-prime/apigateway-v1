@@ -4,7 +4,6 @@ import { useState } from "react";
 import {
   CreateApiKeyRequest,
   CreateApiKeyResponse,
-  ApiKeyService,
 } from "@/lib/apikeys";
 
 interface CreateApiKeyModalProps {
@@ -150,7 +149,7 @@ export function CreateApiKeyModal({
                   </h3>
                   <div className="mt-2 text-sm text-green-700">
                     <p>
-                      Please copy and save your API key now. You won't be able
+                      Please copy and save your API key now. You won&apos;t be able
                       to see it again.
                     </p>
                   </div>
@@ -237,8 +236,8 @@ export function CreateApiKeyModal({
                     </button>
                   </div>
                   <p className="text-xs text-yellow-700 mt-2">
-                    This is the only time you'll see this key. Copy and store it
-                    securely - you won't be able to retrieve it again.
+                    This is the only time you&apos;ll see this key. Copy and store it
+                    securely - you won&apos;t be able to retrieve it again.
                   </p>
                 </div>
               </div>
