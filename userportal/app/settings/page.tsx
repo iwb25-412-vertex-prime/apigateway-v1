@@ -344,7 +344,7 @@ export default function SettingsPage() {
                       <div className="flex items-center justify-between">
                         <div>
                           <h3 className="text-lg font-semibold text-orange-900">Free Plan</h3>
-                          <p className="text-orange-700">Up to 3 API keys and 1,000 requests per month</p>
+                          <p className="text-orange-700">Up to 3 API keys and 300 requests per month</p>
                         </div>
                         <div className="text-right">
                           <div className="text-2xl font-bold text-orange-900">$0</div>
@@ -370,7 +370,7 @@ export default function SettingsPage() {
                         <div className="bg-slate-50 p-4 rounded-lg">
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-sm font-medium text-slate-700">API Requests</span>
-                            <span className="text-sm text-slate-600">247 / 1,000</span>
+                            <span className="text-sm text-slate-600">6 / 300</span>
                           </div>
                           <div className="w-full bg-slate-200 rounded-full h-2">
                             <div className="bg-orange-600 h-2 rounded-full" style={{ width: "24.7%" }}></div>
