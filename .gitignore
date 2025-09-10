@@ -198,3 +198,4 @@ build/Release/
 .svelte-kit
 
 # End of https://www.gitignore.io/api/node,java,ballerina
+config.bat

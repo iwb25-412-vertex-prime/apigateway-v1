@@ -5,26 +5,32 @@ A comprehensive full-stack application featuring secure user authentication and 
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - **Ballerina Swan Lake** (2201.10.0 or later) - [Download here](https://ballerina.io/downloads/)
 - **Node.js** (18.0 or later) - [Download here](https://nodejs.org/)
 - **Java** (11 or later) - Required for Ballerina
 
 ### 1. Start the Backend (Ballerina)
+
 ```bash
 cd ballerina-backend
 bal run
 ```
+
 ✅ Backend runs on http://localhost:8080
 
 ### 2. Start the Frontend (Next.js)
+
 ```bash
 cd userportal
 npm install
 npm run dev
 ```
+
 ✅ Frontend runs on http://localhost:3000
 
 ### 3. Access the Application
+
 - **Frontend UI**: http://localhost:3000
 - **Backend API**: http://localhost:8080/api/health
 - **API Documentation**: http://localhost:8080/api/docs
@@ -35,7 +41,9 @@ npm run dev
 ✅ **RUNNING** - Backend service successfully started  
 ✅ **DATABASE** - SQLite schema initialized  
 ✅ **QUOTA SYSTEM** - Monthly limits and tracking active  
-✅ **FRONTEND** - React(Next) UI with full functionality
+✅ **FRONTEND** - React(Next) UI with full functionality  
+✅ **SCRIPTS** - Windows batch and PowerShell scripts available  
+✅ **TESTING** - Comprehensive testing suite for all features
 
 ## 📁 Project Structure
 
@@ -63,7 +71,10 @@ npm run dev
 │   ├── public/                # 🌍 Static assets
 │   └── package.json           # 📦 Frontend dependencies
 ├── start-services.bat         # 🪟 Windows startup script
-├── start-services.sh          # 🐧 Unix/Linux startup script
+├── setup-sqlite.bat           # �️U SQLite database setup
+├── start-project.bat          # � Coimplete project startup
+├── test-*.bat                 # 🧪 Windows testing scripts
+├── test-*.ps1                 # 🔧 PowerShell testing & management
 └── README.md                  # 📖 Main project documentation
 ```
 
@@ -397,24 +408,23 @@ curl -X PUT http://localhost:8080/api/apikeys/KEY_ID/rules \
 
 Use the provided test scripts to test the API key functionality:
 
-**Windows:**
+**Windows (Batch Scripts):**
 
-```bash
+```cmd
 test-apikeys.bat
-test-rules-update.bat  # NEW: Test rule management
+test-rules-update.bat
 ```
 
-**Unix/Linux/macOS:**
+**Windows (PowerShell Scripts):**
 
-```bash
-chmod +x test-apikeys.sh
-./test-apikeys.sh
-
-chmod +x test-rules-update.sh  # NEW: Test rule management
-./test-rules-update.sh
+```powershell
+.\create-full-access-key.ps1
+.\test-api-usage.ps1
+.\test-content-moderation.ps1
+.\update-api-key-permissions.ps1
 ```
 
-The original test scripts will:
+The batch test scripts will:
 
 1. Register a test user
 2. Login to get a JWT token
@@ -423,12 +433,61 @@ The original test scripts will:
 5. List all API keys
 6. Test API key validation
 
-The new rule management test script will:
+The PowerShell scripts provide advanced functionality:
 
-1. Create an API key with initial rules
-2. Update the rules dynamically
-3. Verify the changes
-4. Test with empty rules
+1. **API Usage Testing**: Comprehensive endpoint testing with detailed output
+2. **Content Moderation**: Test content moderation API with various scenarios
+3. **Permission Management**: Update API key permissions dynamically
+4. **Dashboard Metrics**: Verify real-time dashboard updates
+5. **Quota Management**: Fix and test quota-related issues
+
+## �️ Availabsle Scripts
+
+### Windows Batch Scripts (.bat)
+
+- `start-services.bat` - Start both backend and frontend services
+- `start-project.bat` - Complete project setup and startup with SQLite
+- `setup-sqlite.bat` - Initialize SQLite database
+- `test-apikeys.bat` - Test API key management functionality
+- `test-rules-update.bat` - Test dynamic rule management
+- `test-api.bat` - Basic API endpoint testing
+- `view-database.bat` - View SQLite database contents
+
+### PowerShell Scripts (.ps1)
+
+- `create-full-access-key.ps1` - Create API key with all permissions
+- `test-api-usage.ps1` - Comprehensive API usage demonstration
+- `test-content-moderation.ps1` - Test content moderation API
+- `test-dashboard-metrics.ps1` - Verify dashboard metrics updates
+- `update-api-key-permissions.ps1` - Update existing API key permissions
+- `fix-quota-issue.ps1` - Fix API key quota problems
+- `debug-api.ps1` - Debug API responses and user data
+
+### Quick Start Commands
+
+**Start Everything (Recommended):**
+
+```cmd
+start-project.bat
+```
+
+**Start Services Only:**
+
+```cmd
+start-services.bat
+```
+
+**Test API Keys:**
+
+```cmd
+test-apikeys.bat
+```
+
+**Test with PowerShell:**
+
+```powershell
+.\test-api-usage.ps1
+```
 
 ### 🗄️ Database Schema
 
@@ -1713,20 +1772,24 @@ This project is for educational purposes. Modify and use as needed for your proj
 ### Recent Fixes Applied
 
 #### ✅ Fixed: SQL Import Error
+
 **Issue**: `ERROR [quota.bal:(95:9,95:18)] undefined module 'sql'`
 **Solution**: Added missing `import ballerina/sql;` to quota.bal
 
-#### ✅ Fixed: Continue Statement Error  
+#### ✅ Fixed: Continue Statement Error
+
 **Issue**: `ERROR [quota.bal:(114:25,114:34)] continue cannot be used outside of a loop`
 **Solution**: Removed invalid `continue` statement from `from` expression in quota management
 
 #### ✅ Fixed: Type Compatibility
+
 **Issue**: Stream type incompatibility with SQL Error types
 **Solution**: Proper error handling in quota refresh functionality
 
 ### Performance Monitoring
 
 #### Database Performance
+
 ```bash
 # Check database size
 ls -lh ballerina-backend/database/userportal.db
@@ -1736,6 +1799,7 @@ ls -lh ballerina-backend/database/userportal.db
 ```
 
 #### API Performance
+
 ```bash
 # Test API response times
 curl -w "@curl-format.txt" -o /dev/null -s http://localhost:8080/api/health
@@ -1748,6 +1812,7 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 ### Development Tools
 
 #### Database Inspection
+
 ```bash
 # Install SQLite CLI (if not already installed)
 # Windows: Download from https://sqlite.org/download.html
@@ -1763,6 +1828,7 @@ SELECT * FROM users LIMIT 5;
 ```
 
 #### API Testing Scripts
+
 ```bash
 # Test complete API key workflow
 curl -X POST http://localhost:8080/api/auth/register \
@@ -1779,9 +1845,11 @@ curl -X POST http://localhost:8080/api/auth/login \
 ### Production Environment Setup
 
 #### Environment Configuration
+
 Create production configuration files:
 
 **ballerina-backend/Config.toml** (Production):
+
 ```toml
 [auth]
 jwtSecret = "${JWT_SECRET}"
@@ -1795,7 +1863,9 @@ port = "${PORT:8080}"
 ```
 
 #### Docker Production Setup
+
 **Dockerfile.prod** (Backend):
+
 ```dockerfile
 FROM ballerina/ballerina:2201.10.0-alpine
 WORKDIR /app
@@ -1807,8 +1877,9 @@ CMD ["bal", "run", "--b7a.config.file=Config.toml"]
 ```
 
 **docker-compose.prod.yml**:
+
 ```yaml
-version: '3.8'
+version: "3.8"
 services:
   backend:
     build:
@@ -1844,6 +1915,7 @@ services:
 ### Kubernetes Deployment
 
 #### Backend Deployment
+
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -1860,28 +1932,29 @@ spec:
         app: userportal-backend
     spec:
       containers:
-      - name: backend
-        image: userportal/backend:latest
-        ports:
-        - containerPort: 8080
-        env:
-        - name: JWT_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: userportal-secrets
-              key: jwt-secret
-        volumeMounts:
-        - name: data-volume
-          mountPath: /app/data
+        - name: backend
+          image: userportal/backend:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: userportal-secrets
+                  key: jwt-secret
+          volumeMounts:
+            - name: data-volume
+              mountPath: /app/data
       volumes:
-      - name: data-volume
-        persistentVolumeClaim:
-          claimName: userportal-data-pvc
+        - name: data-volume
+          persistentVolumeClaim:
+            claimName: userportal-data-pvc
 ```
 
 ### Cloud Platform Deployment
 
 #### Choreo (Ballerina Cloud)
+
 ```bash
 # Install Choreo CLI
 npm install -g @choreodev/cli
@@ -1892,6 +1965,7 @@ choreo deploy --project userportal-backend
 ```
 
 #### Vercel (Frontend)
+
 ```bash
 # Install Vercel CLI
 npm install -g vercel
@@ -1904,6 +1978,7 @@ vercel --prod
 ## 📊 Monitoring & Observability
 
 ### Health Monitoring
+
 ```bash
 # Comprehensive health check
 curl -s http://localhost:8080/api/health | jq '.'
@@ -1917,6 +1992,7 @@ curl -s http://localhost:8080/api/health | jq '.'
 ```
 
 ### Metrics Collection
+
 ```bash
 # Enable Ballerina observability
 bal run --observability-included
@@ -1927,6 +2003,7 @@ bal run --observability-included
 ```
 
 ### Log Analysis
+
 ```bash
 # Structured logging format
 tail -f ballerina-backend/logs/application.log | jq '.'
@@ -1944,6 +2021,7 @@ tail -f ballerina-backend/logs/application.log | jq '.'
 ### Production Security Checklist
 
 #### ✅ Authentication Security
+
 - [x] JWT tokens with secure signing
 - [x] Password hashing with SHA256+salt
 - [x] Token expiration (1 hour default)
@@ -1951,6 +2029,7 @@ tail -f ballerina-backend/logs/application.log | jq '.'
 - [x] Database token tracking
 
 #### ✅ API Security
+
 - [x] API key hashing in database
 - [x] Rate limiting via quota system
 - [x] Input validation and sanitization
@@ -1958,6 +2037,7 @@ tail -f ballerina-backend/logs/application.log | jq '.'
 - [x] Secure error handling
 
 #### 🔄 Additional Security Measures
+
 ```bash
 # 1. Enable HTTPS (production)
 # Add SSL certificate configuration
@@ -1973,6 +2053,7 @@ tail -f ballerina-backend/logs/application.log | jq '.'
 ```
 
 ### Security Monitoring
+
 ```bash
 # Monitor failed authentication attempts
 grep "Invalid credentials" ballerina-backend/logs/application.log
@@ -1987,6 +2068,7 @@ grep "API key" ballerina-backend/logs/application.log | tail -20
 ## 🧪 Testing & Quality Assurance
 
 ### Automated Testing
+
 ```bash
 # Backend unit tests
 cd ballerina-backend
@@ -2004,6 +2086,7 @@ npm run test:e2e
 ```
 
 ### Load Testing
+
 ```bash
 # Install Apache Bench
 # Test authentication endpoint
@@ -2016,6 +2099,7 @@ ab -n 1000 -c 10 -p validate.json -T application/json \
 ```
 
 ### Performance Benchmarks
+
 ```bash
 # Expected performance metrics:
 # - Authentication: < 100ms response time
@@ -2027,16 +2111,20 @@ ab -n 1000 -c 10 -p validate.json -T application/json \
 ## 📚 API Documentation
 
 ### Interactive API Documentation
+
 Access the built-in API documentation:
+
 - **Swagger UI**: http://localhost:8080/api/docs
 - **OpenAPI Spec**: http://localhost:8080/api/openapi.json
 
 ### API Rate Limits
+
 - **Authentication endpoints**: No rate limit (implement in production)
 - **API key endpoints**: Protected by JWT authentication
 - **Public API endpoints**: Limited by API key quota (100/month)
 
 ### Error Codes Reference
+
 ```json
 {
   "400": "Bad Request - Invalid input data",
@@ -2054,16 +2142,19 @@ Access the built-in API documentation:
 ## 📞 Support & Community
 
 ### Getting Help
+
 - **Issues**: Report bugs on GitHub Issues
 - **Discussions**: Join GitHub Discussions for questions
 - **Documentation**: Check this README and inline code comments
 - **Community**: Join Ballerina Discord for language-specific help
 
 ### Version History
+
 - **v1.0.0** (2025-08-25): Initial release with full authentication and API key management
 - **v1.0.1** (2025-08-25): Fixed SQL import and quota management issues
 
 ### Roadmap
+
 - [ ] OAuth2 integration (Google, GitHub)
 - [ ] Multi-factor authentication (MFA)
 - [ ] Advanced analytics dashboard
