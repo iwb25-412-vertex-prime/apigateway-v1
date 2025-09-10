@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/useToast";
 import {
   EyeIcon,
   EyeSlashIcon,
   UserIcon,
   LockClosedIcon,
+  CheckCircleIcon,
 } from "@heroicons/react/24/outline";
 
 export default function LoginForm() {
@@ -15,17 +17,31 @@ export default function LoginForm() {
     password: "",
   });
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const { login, loading } = useAuth();
+  const { success: showSuccess, error: showError } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setSuccess(false);
 
-    const success = await login(formData);
-    if (!success) {
+    const loginSuccess = await login(formData);
+    if (loginSuccess) {
+      setSuccess(true);
+      showSuccess("Welcome back!", "You have been successfully logged in.");
+      // Success feedback will show briefly before redirect
+      setTimeout(() => {
+        // The auth context will handle the redirect
+      }, 1000);
+    } else {
       setError("Invalid username or password");
+      showError(
+        "Login Failed",
+        "Please check your username and password and try again."
+      );
     }
   };
 
@@ -76,7 +92,7 @@ export default function LoginForm() {
                 onFocus={() => setFocusedField("username")}
                 onBlur={() => setFocusedField(null)}
                 required
-                className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl bg-white/50 backdrop-blur-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 hover:bg-white/70"
+                className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl bg-white/50 backdrop-blur-sm placeholder-slate-400 text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 hover:bg-white/70"
                 placeholder="Enter your username"
               />
             </div>
@@ -108,7 +124,7 @@ export default function LoginForm() {
                 onFocus={() => setFocusedField("password")}
                 onBlur={() => setFocusedField(null)}
                 required
-                className="block w-full pl-10 pr-12 py-3 border border-slate-200 rounded-xl bg-white/50 backdrop-blur-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 hover:bg-white/70"
+                className="block w-full pl-10 pr-12 py-3 border border-slate-200 rounded-xl bg-white/50 backdrop-blur-sm placeholder-slate-400 text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 hover:bg-white/70"
                 placeholder="Enter your password"
               />
               <button
@@ -148,6 +164,21 @@ export default function LoginForm() {
             </div>
           )}
 
+          {success && (
+            <div className="bg-green-50 border border-green-200 rounded-xl p-3 animate-pulse">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <CheckCircleIcon className="h-5 w-5 text-green-400" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-green-800">
+                    Login successful! Redirecting to dashboard...
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={loading}
@@ -176,7 +207,7 @@ export default function LoginForm() {
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     ></path>
                   </svg>
-                  Signing in...
+                  Authenticating...
                 </>
               ) : (
                 "Sign In"

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthService } from "@/lib/auth";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 interface ApiKeyStats {
   totalKeys: number;
@@ -34,7 +34,7 @@ export function DashboardHome() {
   });
 
   // Fetch API key statistics
-  const fetchStats = async (isManualRefresh = false) => {
+  const fetchStats = useCallback(async (isManualRefresh = false) => {
     // Set appropriate loading state
     if (isManualRefresh) {
       setDashboardState((prev) => ({ ...prev, refreshing: true }));
@@ -63,14 +63,14 @@ export function DashboardHome() {
 
         const totalKeys = apiKeys.length;
         const activeKeys = apiKeys.filter(
-          (key: any) => key.status === "active"
+          (key: { status: string }) => key.status === "active"
         ).length;
         const totalUsage = apiKeys.reduce(
-          (sum: number, key: any) => sum + (key.usage_count || 0),
+          (sum: number, key: { usage_count?: number }) => sum + (key.usage_count || 0),
           0
         );
         const monthlyUsage = apiKeys.reduce(
-          (sum: number, key: any) => sum + (key.current_month_usage || 0),
+          (sum: number, key: { current_month_usage?: number }) => sum + (key.current_month_usage || 0),
           0
         );
 
@@ -101,7 +101,7 @@ export function DashboardHome() {
         refreshing: false 
       }));
     }
-  };
+  }, [dashboardState.stats.totalKeys]);
 
   useEffect(() => {
     fetchStats(false); // Initial load
@@ -110,7 +110,7 @@ export function DashboardHome() {
     const interval = setInterval(() => fetchStats(false), 30000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchStats]);
 
   const quickActions = [
     {

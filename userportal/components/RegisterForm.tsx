@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/useToast";
 import {
   EyeIcon,
   EyeSlashIcon,
@@ -25,6 +26,7 @@ export default function RegisterForm() {
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [passwordStrength, setPasswordStrength] = useState(0);
   const { register, loading } = useAuth();
+  const { success: showSuccess, error: showError } = useToast();
 
   const calculatePasswordStrength = (password: string) => {
     let strength = 0;
@@ -75,6 +77,7 @@ export default function RegisterForm() {
 
     if (success) {
       setSuccess(true);
+      showSuccess("Account Created!", "Welcome! Your account has been created successfully. You can now sign in.");
       setFormData({
         username: "",
         email: "",
@@ -82,8 +85,13 @@ export default function RegisterForm() {
         confirmPassword: "",
       });
       setPasswordStrength(0);
+      // Show success message for 3 seconds, then user can switch to login
+      setTimeout(() => {
+        setSuccess(false);
+      }, 3000);
     } else {
       setError("Registration failed. Username or email might already exist.");
+      showError("Registration Failed", "Unable to create account. The username or email might already be in use.");
     }
   };
 
@@ -139,7 +147,7 @@ export default function RegisterForm() {
                 onFocus={() => setFocusedField("username")}
                 onBlur={() => setFocusedField(null)}
                 required
-                className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl bg-white/50 backdrop-blur-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 hover:bg-white/70"
+                className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl bg-white/50 backdrop-blur-sm placeholder-slate-400 text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 hover:bg-white/70"
                 placeholder="Choose a username"
               />
             </div>
@@ -171,7 +179,7 @@ export default function RegisterForm() {
                 onFocus={() => setFocusedField("email")}
                 onBlur={() => setFocusedField(null)}
                 required
-                className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl bg-white/50 backdrop-blur-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 hover:bg-white/70"
+                className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl bg-white/50 backdrop-blur-sm placeholder-slate-400 text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 hover:bg-white/70"
                 placeholder="Enter your email"
               />
             </div>
@@ -203,7 +211,7 @@ export default function RegisterForm() {
                 onFocus={() => setFocusedField("password")}
                 onBlur={() => setFocusedField(null)}
                 required
-                className="block w-full pl-10 pr-12 py-3 border border-slate-200 rounded-xl bg-white/50 backdrop-blur-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 hover:bg-white/70"
+                className="block w-full pl-10 pr-12 py-3 border border-slate-200 rounded-xl bg-white/50 backdrop-blur-sm placeholder-slate-400 text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 hover:bg-white/70"
                 placeholder="Create a password"
               />
               <button
@@ -274,7 +282,7 @@ export default function RegisterForm() {
                 onFocus={() => setFocusedField("confirmPassword")}
                 onBlur={() => setFocusedField(null)}
                 required
-                className="block w-full pl-10 pr-12 py-3 border border-slate-200 rounded-xl bg-white/50 backdrop-blur-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 hover:bg-white/70"
+                className="block w-full pl-10 pr-12 py-3 border border-slate-200 rounded-xl bg-white/50 backdrop-blur-sm placeholder-slate-400 text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 hover:bg-white/70"
                 placeholder="Confirm your password"
               />
               <button
@@ -298,7 +306,7 @@ export default function RegisterForm() {
                   </div>
                 ) : (
                   <span className="text-xs text-red-600">
-                    Passwords don't match
+                    Passwords don&apos;t match
                   </span>
                 )}
               </div>
@@ -329,14 +337,14 @@ export default function RegisterForm() {
           )}
 
           {success && (
-            <div className="bg-green-50 border border-green-200 rounded-xl p-3 animate-bounce">
+            <div className="bg-green-50 border border-green-200 rounded-xl p-3 animate-pulse">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
                   <CheckCircleIcon className="h-5 w-5 text-green-400" />
                 </div>
                 <div className="ml-3">
                   <p className="text-sm text-green-800">
-                    Registration successful! You can now login.
+                    🎉 Account created successfully! You can now switch to the Sign In tab to login.
                   </p>
                 </div>
               </div>
@@ -371,7 +379,7 @@ export default function RegisterForm() {
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     ></path>
                   </svg>
-                  Creating account...
+                  Creating your account...
                 </>
               ) : (
                 "Create Account"

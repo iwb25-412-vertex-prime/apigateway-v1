@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useState, useEffect, useCallback } from "react";
 
 interface ApiKey {
   id: string;
@@ -26,7 +25,7 @@ interface TestEndpoint {
 interface TestResult {
   status: number;
   statusText: string;
-  data: any;
+  data: Record<string, unknown>;
   headers: Record<string, string>;
   duration: number;
   timestamp: string;
@@ -132,7 +131,6 @@ const TEST_ENDPOINTS: TestEndpoint[] = [
 ];
 
 export function ApiTesting() {
-  const { user } = useAuth();
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [selectedKeyId, setSelectedKeyId] = useState<string>("");
   const [selectedEndpoint, setSelectedEndpoint] = useState<TestEndpoint | null>(
@@ -145,11 +143,7 @@ export function ApiTesting() {
   const [error, setError] = useState<string>("");
   const [testHistory, setTestHistory] = useState<TestResult[]>([]);
 
-  useEffect(() => {
-    fetchApiKeys();
-  }, []);
-
-  const fetchApiKeys = async () => {
+  const fetchApiKeys = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch("http://localhost:8080/api/apikeys", {
@@ -165,10 +159,14 @@ export function ApiTesting() {
           setSelectedKeyId(data.apiKeys[0].id);
         }
       }
-    } catch (error) {
-      console.error("Failed to fetch API keys:", error);
+    } catch {
+      console.error("Failed to fetch API keys");
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchApiKeys();
+  }, [fetchApiKeys]);
 
   const handleEndpointSelect = (endpoint: TestEndpoint) => {
     setSelectedEndpoint(endpoint);
@@ -201,8 +199,8 @@ export function ApiTesting() {
         "Content-Type": "application/json",
       };
 
-      // For testing purposes, we'll use a mock API key format
-      // In a real implementation, you'd need to store and retrieve the actual key
+      // For testing purposes, we&apos;ll use a mock API key format
+      // In a real implementation, you&apos;d need to store and retrieve the actual key
       const mockApiKey = `mk_test_${selectedKey.id.substring(0, 8)}${Date.now()
         .toString()
         .slice(-4)}`;
@@ -215,7 +213,7 @@ export function ApiTesting() {
         try {
           const parsedHeaders = JSON.parse(customHeaders);
           Object.assign(headers, parsedHeaders);
-        } catch (e) {
+        } catch {
           throw new Error("Invalid JSON in custom headers");
         }
       }
@@ -398,8 +396,7 @@ export function ApiTesting() {
                   </div>
                   {selectedEndpoint?.id === endpoint.id && selectedKeyId && (
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
+                      onClick={() => {
                         executeTest();
                       }}
                       disabled={loading}
@@ -442,7 +439,7 @@ export function ApiTesting() {
                   value={customHeaders}
                   onChange={(e) => setCustomHeaders(e.target.value)}
                   className="w-full h-20 px-3 py-2 border border-gray-300 rounded-lg font-mono text-sm"
-                  placeholder='{"Custom-Header": "value"}'
+                  placeholder='Copy and paste JSON headers here, for example: {&quot;Custom-Header&quot;: &quot;value&quot;}'
                 />
               </div>
 
@@ -575,7 +572,7 @@ export function ApiTesting() {
                   Ready to Test
                 </h3>
                 <p className="text-gray-500">
-                  Select an API key and endpoint, then click "Execute Test" to
+                  Select an API key and endpoint, then click {`"`}Execute Test{`"`} to
                   see results here.
                 </p>
               </div>

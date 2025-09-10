@@ -8,8 +8,8 @@ interface Endpoint {
   path: string;
   title: string;
   description: string;
-  requestBody?: any;
-  responseExample: any;
+  requestBody?: Record<string, unknown>;
+  responseExample: Record<string, unknown>;
   curlExample: string;
 }
 
@@ -50,7 +50,7 @@ export function EndpointCard({ endpoint, baseUrl }: EndpointCardProps) {
           ].map((tab) => (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key as any)}
+              onClick={() => setActiveTab(tab.key as "request" | "response" | "curl")}
               className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === tab.key
                   ? "border-orange-500 text-orange-600"

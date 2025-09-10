@@ -8,16 +8,9 @@ interface Endpoint {
   path: string;
   title: string;
   description: string;
-  requestBody?: any;
-  responseExample: any;
+  requestBody?: Record<string, unknown>;
+  responseExample: Record<string, unknown>;
   curlExample: string;
-}
-
-interface EndpointCategory {
-  title: string;
-  icon: string;
-  endpoints: string[];
-  comingSoon?: boolean;
 }
 
 export function ApiDocumentation() {
@@ -228,10 +221,11 @@ export function ApiDocumentation() {
               
               <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-sm text-blue-800">
-                  <strong>Getting API Keys:</strong> Create and manage your API keys in the 
+                  <strong>Getting API Keys:</strong> Create and manage your API keys in the{' '}
                   <a href="/apikeys" className="text-blue-600 hover:text-blue-800 underline ml-1">
                     API Keys section
-                  </a> of this dashboard.
+                  </a>{' '}
+                  of this dashboard.
                 </p>
               </div>
             </section>
@@ -268,7 +262,7 @@ export function ApiDocumentation() {
                       </tr>
                       <tr>
                         <td className="px-4 py-3 text-sm font-mono text-red-600">404</td>
-                        <td className="px-4 py-3 text-sm text-slate-600">Not Found - Resource doesn't exist</td>
+                        <td className="px-4 py-3 text-sm text-slate-600">Not Found - Resource doesn&apos;t exist</td>
                         <td className="px-4 py-3 text-sm font-mono text-slate-500">{`{"error": "User not found"}`}</td>
                       </tr>
                     </tbody>

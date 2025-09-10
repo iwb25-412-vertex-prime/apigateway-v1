@@ -54,6 +54,17 @@ body {
   }
 }
 
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 @keyframes pulse-glow {
   0%, 100% {
     box-shadow: 0 0 20px rgba(255, 153, 0, 0.3);
@@ -77,6 +88,10 @@ body {
 
 .animate-pulse-glow {
   animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-slide-in-right {
+  animation: slideInFromRight 0.3s ease-out;
 }
 
 /* Smooth scrolling */

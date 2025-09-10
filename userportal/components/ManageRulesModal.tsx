@@ -238,7 +238,7 @@ export function ManageRulesModal({
                         <div className="mt-2 text-sm text-blue-700">
                           <p>
                             You have unsaved changes to the content policy rules. 
-                            Click "Update Rules" to apply these changes.
+                            Click {`"`}Update Rules{`"`} to apply these changes.
                           </p>
                         </div>
                       </div>
