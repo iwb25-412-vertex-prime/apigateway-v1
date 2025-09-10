@@ -3,7 +3,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Sidebar } from './Sidebar';
 import { Navigation } from './Navigation';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;

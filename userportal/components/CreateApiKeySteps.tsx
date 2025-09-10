@@ -154,7 +154,7 @@ export function CreateApiKeySteps({
     try {
       await navigator.clipboard.writeText(text);
       showSuccess("Copied!", "API key copied to clipboard");
-    } catch (err) {
+    } catch {
       // Fallback for older browsers
       const textArea = document.createElement("textarea");
       textArea.value = text;
@@ -265,7 +265,7 @@ export function CreateApiKeySteps({
                 Basic Information
               </h2>
               <p className="text-slate-600">
-                Let's start with the basics for your new API key.
+                Let&apos;s start with the basics for your new API key.
               </p>
             </div>
 
@@ -530,7 +530,7 @@ export function CreateApiKeySteps({
                     </h4>
                     <div className="mt-2 text-sm text-orange-700">
                       <p>
-                        Once created, you'll only see your API key once. Make
+                        Once created, you&apos;ll only see your API key once. Make
                         sure to copy and store it securely.
                       </p>
                     </div>
@@ -567,7 +567,7 @@ export function CreateApiKeySteps({
                   </h3>
                   <div className="mt-2 text-sm text-green-700">
                     <p>
-                      Please copy and save your API key now. You won't be able
+                      Please copy and save your API key now. You won&apos;t be able
                       to see it again.
                     </p>
                   </div>
@@ -621,7 +621,7 @@ export function CreateApiKeySteps({
                     </button>
                   </div>
                   <p className="text-xs text-yellow-700 mt-2">
-                    This is the only time you'll see this key. Copy and store it
+                    This is the only time you&apos;ll see this key. Copy and store it
                     securely.
                   </p>
                 </div>
