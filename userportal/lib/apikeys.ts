@@ -1,4 +1,4 @@
-// API Key management utilities for working with Ballerina backend
+// API Key management utilities for working with Node.js backend
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";

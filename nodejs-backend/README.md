@@ -1,6 +1,6 @@
 # Node.js Backend - User Portal API Gateway
 
-This is the Node.js implementation of the User Portal API Gateway, providing the same functionality as the Ballerina backend.
+A complete Node.js/Express implementation of the User Portal API Gateway with authentication and API key management.
 
 ## Features
 
@@ -217,20 +217,6 @@ Run `npm install` to ensure all dependencies are installed.
 - **Implement rate limiting** for production deployment
 - **Validate all user input** (already implemented in routes)
 - **Use environment variables** for sensitive configuration
-
-## Differences from Ballerina Backend
-
-The Node.js backend provides **identical functionality** to the Ballerina backend:
-- Same API endpoints and routes
-- Same authentication mechanisms
-- Same database schema
-- Same quota management system
-- Same business logic
-
-The only differences are:
-- Implementation language (Node.js vs Ballerina)
-- Dependencies (npm packages vs Ballerina modules)
-- Startup method (node vs bal run)
 
 ## License
 

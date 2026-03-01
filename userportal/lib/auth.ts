@@ -1,4 +1,4 @@
-// Authentication utilities for working with Ballerina JWT backend
+// Authentication utilities for working with Node.js JWT backend
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
