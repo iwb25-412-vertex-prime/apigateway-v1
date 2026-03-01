@@ -1,23 +1,80 @@
-# User Portal (Next.js + Ballerina)
+# User Portal - API Gateway
 
-A comprehensive full-stack application featuring secure user authentication and API key management system. Built with Ballerina backend, SQLite database, and Next.js frontend. Includes password hashing, JWT-like tokens, database storage, token revocation, and complete API key lifecycle management with quota tracking.
+A comprehensive full-stack application featuring secure user authentication and API key management system. Built with **Next.js frontend** and your choice of **Ballerina** or **Node.js** backend, SQLite database. Includes password hashing, JWT-like tokens, database storage, token revocation, and complete API key lifecycle management with quota tracking.
+
+## 🎯 Backend Options
+
+This project now supports **TWO backend implementations** with identical functionality:
+
+### Option 1: Ballerina Backend (Original)
+- Enterprise-grade backend using Ballerina language
+- Excellent for cloud-native applications
+- Built-in concurrency and integration features
+
+### Option 2: Node.js Backend (NEW!)
+- JavaScript/Node.js implementation
+- Same API endpoints and functionality
+- Easier for JavaScript developers
+- Express.js framework
+
+**Both backends provide exactly the same features and can be used interchangeably with the same frontend!**
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
+#### For Ballerina Backend:
 - **Ballerina Swan Lake** (2201.10.0 or later) - [Download here](https://ballerina.io/downloads/)
-- **Node.js** (18.0 or later) - [Download here](https://nodejs.org/)
 - **Java** (11 or later) - Required for Ballerina
 
-### 1. Start the Backend (Ballerina)
+#### For Node.js Backend:
+- **Node.js** (14.0 or later) - [Download here](https://nodejs.org/)
+
+#### For Frontend:
+- **Node.js** (18.0 or later) - [Download here](https://nodejs.org/)
+
+---
+
+## Starting the Backend
+
+### Option A: Ballerina Backend
 
 ```bash
 cd ballerina-backend
 bal run
 ```
 
+Or use the batch script:
+```bash
+start-ballerina-backend.bat
+```
+
 ✅ Backend runs on http://localhost:8080
+
+### Option B: Node.js Backend
+
+**First time setup:**
+```bash
+setup-nodejs.bat
+```
+
+**Start the server:**
+```bash
+start-nodejs-backend.bat
+```
+
+Or manually:
+```bash
+cd nodejs-backend
+npm install
+npm start
+```
+
+✅ Backend runs on http://localhost:8080
+
+---
+
+## Starting the Frontend
 
 ### 2. Start the Frontend (Next.js)
 
@@ -80,9 +137,26 @@ npm run dev
 
 ## What's Implemented
 
-This project includes a complete authentication and API key management system with comprehensive quota management and usage tracking:
+This project includes a complete authentication and API key management system with comprehensive quota management and usage tracking. **Both Ballerina and Node.js backends provide identical functionality!**
 
-### ✅ Core Features Implemented
+### 🎯 Backend Options
+
+#### Ballerina Backend (Original)
+- Located in `ballerina-backend/` directory
+- Uses Ballerina Swan Lake runtime
+- Modular architecture with separate `.bal` files for each concern
+- Start with: `bal run` or `start-services.bat`
+
+#### Node.js Backend (NEW!)
+- Located in `nodejs-backend/` directory  
+- Uses Express.js framework
+- JavaScript/TypeScript friendly
+- Same API endpoints, database schema, and authentication logic
+- Start with: `npm start` or `start-nodejs-backend.bat`
+
+**Note:** You only need to run ONE backend at a time. Both connect to port 8080 and provide the same API.
+
+### ✅ Core Features Implemented (Both Backends)
 
 - **User Registration & Login System** - Complete user account management with validation
 - **JWT-like Token Authentication** - Secure token-based authentication with database tracking
